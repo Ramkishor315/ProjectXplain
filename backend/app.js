@@ -2,7 +2,12 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+
 const healthRoutes = require('./routes/health');
+const projectRoutes = require('./routes/projects');
+const requirementRoutes = require('./routes/requirements');
+const userStoryRoutes = require('./routes/userStories');
+const databaseRoutes = require('./routes/database');
 
 const app = express();
 
@@ -18,5 +23,9 @@ app.get('/', (request, response) => {
 });
 
 app.use('/api', healthRoutes);
+app.use('/api', projectRoutes);
+app.use('/api', requirementRoutes);
+app.use('/api', userStoryRoutes);
+app.use('/api', databaseRoutes);
 
 module.exports = app;
