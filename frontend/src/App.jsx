@@ -21,6 +21,7 @@ import ApiDesign from './pages/project/ApiDesign';
 import SystemArchitecture from './pages/project/SystemArchitecture';
 import DataFlow from './pages/project/DataFlow';
 import CseConcepts from './pages/project/CseConcepts';
+import AIMentor from './pages/project/AIMentor';
 import PlaceholderSection from './pages/project/PlaceholderSection';
 
 const API_PROJECTS_URL = 'http://localhost:4000/api/projects';
@@ -185,7 +186,7 @@ function App() {
     { id: 6, name: 'System Architecture', completed: archComponents.length > 0 },
     { id: 7, name: 'Request / Data Flow', completed: dataFlowSteps.length > 0 },
     { id: 8, name: 'CSE Concepts', completed: cseConcepts.length > 0 },
-    { id: 9, name: 'AI Mentor', completed: false },
+    { id: 9, name: 'AI Mentor', completed: true },
   ];
 
   // Helper to format date like: 19 Sep 2026
@@ -1722,11 +1723,9 @@ function App() {
                 )}
 
                 {activeSection === 'ai-mentor' && (
-                  <PlaceholderSection
-                    title="AI Mentor"
-                    subtitle="Interactive explanations and concept breakdowns tailored to your project."
-                    icon={<MentorIcon className="w-8 h-8" />}
-                    description="Ask questions about your software architecture, get explanations of complex engineering choices, and receive suggestions for best practices."
+                  <AIMentor
+                    project={selectedProject}
+                    onNavigate={setActiveSection}
                   />
                 )}
               </main>

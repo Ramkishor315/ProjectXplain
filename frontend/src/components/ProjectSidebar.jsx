@@ -61,16 +61,16 @@ function ProjectSidebar({ activeSection, onSelectSection, counts }) {
       count: counts?.cseConcepts,
       countColor: 'bg-red-100 text-red-700',
     },
-  ];
-
-  const futureDesignItems = [
     {
       id: 'ai-mentor',
       name: 'AI Mentor',
       icon: <MentorIcon className="w-4 h-4 shrink-0" />,
-      isPlaceholder: true,
+      count: 'AI',
+      countColor: 'bg-red-50 text-red-700 border border-red-200 font-bold',
     },
   ];
+
+  const futureDesignItems = [];
 
   const renderNavButton = (item) => {
     const isActive = activeSection === item.id;
@@ -92,14 +92,18 @@ function ProjectSidebar({ activeSection, onSelectSection, counts }) {
           <span className="truncate">{item.name}</span>
         </div>
 
-        {typeof item.count === 'number' && item.count > 0 && (
-          <span className={`ml-2 text-[11px] font-bold px-1.5 py-0.2 rounded-full shrink-0 ${item.countColor || 'bg-stone-200 text-stone-700'}`}>
+        {item.count !== undefined && (
+          <span
+            className={`text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded shrink-0 ${
+              item.countColor || 'bg-stone-100 text-stone-600'
+            }`}
+          >
             {item.count}
           </span>
         )}
 
         {item.isPlaceholder && (
-          <span className="ml-2 bg-stone-100 text-stone-500 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-stone-200 shrink-0">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-stone-400 border border-stone-200 px-1 py-0.2 rounded bg-stone-50">
             Soon
           </span>
         )}
@@ -126,22 +130,24 @@ function ProjectSidebar({ activeSection, onSelectSection, counts }) {
       {/* Group 2: DESIGN (Active Features) */}
       <div className="flex flex-col gap-1">
         <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 px-3 pb-1">
-          DESIGN
+          DESIGN & MENTOR
         </span>
         <nav className="flex flex-col gap-0.5">
           {mainDesignItems.map(renderNavButton)}
         </nav>
       </div>
 
-      {/* Clean Divider between active and future features */}
-      <hr className="border-t border-stone-200 my-1 mx-2" />
-
-      {/* Group 3: FUTURE DESIGN */}
-      <div className="flex flex-col gap-1">
-        <nav className="flex flex-col gap-0.5">
-          {futureDesignItems.map(renderNavButton)}
-        </nav>
-      </div>
+      {/* Group 3: FUTURE DESIGN (if any) */}
+      {futureDesignItems.length > 0 && (
+        <>
+          <hr className="border-t border-stone-200 my-1 mx-2" />
+          <div className="flex flex-col gap-1">
+            <nav className="flex flex-col gap-0.5">
+              {futureDesignItems.map(renderNavButton)}
+            </nav>
+          </div>
+        </>
+      )}
     </aside>
   );
 }
