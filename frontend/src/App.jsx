@@ -18,6 +18,7 @@ import Requirements from './pages/project/Requirements';
 import UserStories from './pages/project/UserStories';
 import DatabaseDesign from './pages/project/DatabaseDesign';
 import ApiDesign from './pages/project/ApiDesign';
+import SystemArchitecture from './pages/project/SystemArchitecture';
 import PlaceholderSection from './pages/project/PlaceholderSection';
 
 const API_PROJECTS_URL = 'http://localhost:4000/api/projects';
@@ -27,6 +28,7 @@ const API_ENTITIES_URL = 'http://localhost:4000/api/entities';
 const API_ATTRIBUTES_URL = 'http://localhost:4000/api/attributes';
 const API_RELATIONSHIPS_URL = 'http://localhost:4000/api/relationships';
 const API_APIS_URL = 'http://localhost:4000/api/apis';
+const API_ARCHITECTURE_URL = 'http://localhost:4000/api/architecture';
 
 function App() {
   // Navigation view state: 'dashboard' | 'create' | 'detail'
@@ -126,6 +128,27 @@ function App() {
   const [apiMessage, setApiMessage] = useState('');
   const [isApiError, setIsApiError] = useState(false);
 
+  // Architecture states (Feature 7)
+  const [archComponents, setArchComponents] = useState([]);
+  const [loadingComponents, setLoadingComponents] = useState(false);
+  const [showAddCompForm, setShowAddCompForm] = useState(false);
+  const [compName, setCompName] = useState('');
+  const [compType, setCompType] = useState('Frontend');
+  const [compDescription, setCompDescription] = useState('');
+  const [isSavingComp, setIsSavingComp] = useState(false);
+  const [compMessage, setCompMessage] = useState('');
+  const [isCompError, setIsCompError] = useState(false);
+
+  const [archConnections, setArchConnections] = useState([]);
+  const [loadingConnections, setLoadingConnections] = useState(false);
+  const [showAddConnForm, setShowAddConnForm] = useState(false);
+  const [connFromId, setConnFromId] = useState('');
+  const [connToId, setConnToId] = useState('');
+  const [connDescription, setConnDescription] = useState('');
+  const [isSavingConn, setIsSavingConn] = useState(false);
+  const [connMessage, setConnMessage] = useState('');
+  const [isConnError, setIsConnError] = useState(false);
+
   // Roadmap progress modules
   const progressModules = [
     { id: 1, name: 'Project Created', completed: true },
@@ -133,7 +156,7 @@ function App() {
     { id: 3, name: 'User Stories / Use Cases', completed: Object.values(userStoriesMap).some((stories) => Array.isArray(stories) && stories.length > 0) },
     { id: 4, name: 'Database Design', completed: entities.length > 0 },
     { id: 5, name: 'API Design', completed: apiEndpoints.length > 0 },
-    { id: 6, name: 'System Architecture', completed: false },
+    { id: 6, name: 'System Architecture', completed: archComponents.length > 0 },
     { id: 7, name: 'Request / Data Flow', completed: false },
     { id: 8, name: 'CSE Concepts', completed: false },
     { id: 9, name: 'AI Mentor', completed: false },
@@ -289,6 +312,44 @@ function App() {
       });
   }
 
+  // Fetch all architecture components for a project (GET /api/projects/:projectId/architecture/components)
+  function fetchArchComponents(projectId) {
+    setLoadingComponents(true);
+    fetch(`${API_PROJECTS_URL}/${projectId}/architecture/components`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to fetch architecture components');
+        return response.json();
+      })
+      .then((data) => {
+        setArchComponents(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching architecture components:', error);
+      })
+      .finally(() => {
+        setLoadingComponents(false);
+      });
+  }
+
+  // Fetch all architecture connections for a project (GET /api/projects/:projectId/architecture/connections)
+  function fetchArchConnections(projectId) {
+    setLoadingConnections(true);
+    fetch(`${API_PROJECTS_URL}/${projectId}/architecture/connections`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to fetch architecture connections');
+        return response.json();
+      })
+      .then((data) => {
+        setArchConnections(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching architecture connections:', error);
+      })
+      .finally(() => {
+        setLoadingConnections(false);
+      });
+  }
+
   // Load all projects on initial page mount
   useEffect(() => {
     fetchProjects();
@@ -329,6 +390,22 @@ function App() {
     setApiRequestBody('');
     setApiResponseBody('');
     setApiMessage('');
+    setArchComponents([]);
+    setLoadingComponents(false);
+    setShowAddCompForm(false);
+    setCompName('');
+    setCompType('Frontend');
+    setCompDescription('');
+    setCompMessage('');
+    setIsCompError(false);
+    setArchConnections([]);
+    setLoadingConnections(false);
+    setShowAddConnForm(false);
+    setConnFromId('');
+    setConnToId('');
+    setConnDescription('');
+    setConnMessage('');
+    setIsConnError(false);
     setActiveSection('overview');
 
     fetch(`${API_PROJECTS_URL}/${id}`)
@@ -347,6 +424,9 @@ function App() {
         fetchRelationships(data.id);
         // Fetch API design data (Feature 6)
         fetchApiEndpoints(data.id);
+        // Fetch architecture data (Feature 7)
+        fetchArchComponents(data.id);
+        fetchArchConnections(data.id);
       })
       .catch((error) => {
         setDetailError(error.message || 'Could not load project');
@@ -841,6 +921,138 @@ function App() {
       });
   }
 
+  // Handle creating an architecture component (POST /api/projects/:projectId/architecture/components)
+  function handleCreateComponent(e) {
+    e.preventDefault();
+    if (!compName.trim()) {
+      setCompMessage('Please enter a component name');
+      setIsCompError(true);
+      return;
+    }
+
+    setIsSavingComp(true);
+    setCompMessage('');
+    setIsCompError(false);
+
+    fetch(`${API_PROJECTS_URL}/${selectedProject.id}/architecture/components`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: compName.trim(),
+        type: compType,
+        description: compDescription.trim(),
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to save architecture component');
+        return response.json();
+      })
+      .then(() => {
+        setCompName('');
+        setCompType('Frontend');
+        setCompDescription('');
+        setShowAddCompForm(false);
+        setCompMessage('');
+        fetchArchComponents(selectedProject.id);
+      })
+      .catch((error) => {
+        setCompMessage(error.message || 'Failed to save architecture component');
+        setIsCompError(true);
+      })
+      .finally(() => {
+        setIsSavingComp(false);
+      });
+  }
+
+  // Handle deleting an architecture component (DELETE /api/architecture/components/:id)
+  function handleDeleteComponent(compId) {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this component? Any connections using it will also be deleted.'
+    );
+    if (!confirmed) return;
+
+    fetch(`${API_ARCHITECTURE_URL}/components/${compId}`, { method: 'DELETE' })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to delete architecture component');
+        return response.json();
+      })
+      .then(() => {
+        setArchComponents((prev) => prev.filter((c) => c.id !== compId));
+        // Refresh connections since cascade delete on backend removed related connections
+        fetchArchConnections(selectedProject.id);
+      })
+      .catch((error) => {
+        alert(error.message || 'Error deleting architecture component');
+      });
+  }
+
+  // Handle creating an architecture connection (POST /api/projects/:projectId/architecture/connections)
+  function handleCreateConnection(e) {
+    e.preventDefault();
+    if (!connFromId || !connToId) {
+      setConnMessage('Please select both source and target components');
+      setIsConnError(true);
+      return;
+    }
+
+    if (Number(connFromId) === Number(connToId)) {
+      setConnMessage('Source and target components cannot be the same');
+      setIsConnError(true);
+      return;
+    }
+
+    setIsSavingConn(true);
+    setConnMessage('');
+    setIsConnError(false);
+
+    fetch(`${API_PROJECTS_URL}/${selectedProject.id}/architecture/connections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from_component_id: Number(connFromId),
+        to_component_id: Number(connToId),
+        description: connDescription.trim(),
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to save connection');
+        return response.json();
+      })
+      .then(() => {
+        setConnFromId('');
+        setConnToId('');
+        setConnDescription('');
+        setShowAddConnForm(false);
+        setConnMessage('');
+        fetchArchConnections(selectedProject.id);
+      })
+      .catch((error) => {
+        setConnMessage(error.message || 'Failed to save connection');
+        setIsConnError(true);
+      })
+      .finally(() => {
+        setIsSavingConn(false);
+      });
+  }
+
+  // Handle deleting an architecture connection (DELETE /api/architecture/connections/:id)
+  function handleDeleteConnection(connId) {
+    const confirmed = window.confirm('Are you sure you want to delete this connection?');
+    if (!confirmed) return;
+
+    fetch(`${API_ARCHITECTURE_URL}/connections/${connId}`, { method: 'DELETE' })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to delete connection');
+        return response.json();
+      })
+      .then(() => {
+        setArchConnections((prev) => prev.filter((c) => c.id !== connId));
+      })
+      .catch((error) => {
+        alert(error.message || 'Error deleting connection');
+      });
+  }
+
   // Summary counts for sidebar and overview
   const counts = {
     requirements: requirements.length,
@@ -850,6 +1062,8 @@ function App() {
     ),
     entities: entities.length,
     apis: apiEndpoints.length,
+    components: archComponents.length,
+    connections: archConnections.length,
   };
 
   return (
@@ -1186,11 +1400,39 @@ function App() {
                 )}
 
                 {activeSection === 'architecture' && (
-                  <PlaceholderSection
-                    title="System Architecture"
-                    subtitle="High-level components, services, and system topology."
-                    icon={<ArchitectureIcon className="w-8 h-8" />}
-                    description="Design your system components (frontend, backend, database, cache, message queues) and the structural connections between them."
+                  <SystemArchitecture
+                    components={archComponents}
+                    loadingComponents={loadingComponents}
+                    showAddCompForm={showAddCompForm}
+                    setShowAddCompForm={setShowAddCompForm}
+                    compName={compName}
+                    setCompName={setCompName}
+                    compType={compType}
+                    setCompType={setCompType}
+                    compDescription={compDescription}
+                    setCompDescription={setCompDescription}
+                    isSavingComp={isSavingComp}
+                    compMessage={compMessage}
+                    setCompMessage={setCompMessage}
+                    isCompError={isCompError}
+                    handleCreateComponent={handleCreateComponent}
+                    handleDeleteComponent={handleDeleteComponent}
+                    connections={archConnections}
+                    loadingConnections={loadingConnections}
+                    showAddConnForm={showAddConnForm}
+                    setShowAddConnForm={setShowAddConnForm}
+                    connFromId={connFromId}
+                    setConnFromId={setConnFromId}
+                    connToId={connToId}
+                    setConnToId={setConnToId}
+                    connDescription={connDescription}
+                    setConnDescription={setConnDescription}
+                    isSavingConn={isSavingConn}
+                    connMessage={connMessage}
+                    setConnMessage={setConnMessage}
+                    isConnError={isConnError}
+                    handleCreateConnection={handleCreateConnection}
+                    handleDeleteConnection={handleDeleteConnection}
                   />
                 )}
 

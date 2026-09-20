@@ -40,15 +40,16 @@ function ProjectSidebar({ activeSection, onSelectSection, counts }) {
       count: counts?.apis,
       countColor: 'bg-amber-100 text-amber-900',
     },
-  ];
-
-  const futureDesignItems = [
     {
       id: 'architecture',
       name: 'System Architecture',
       icon: <ArchitectureIcon className="w-4 h-4 shrink-0" />,
-      isPlaceholder: true,
+      count: counts?.components,
+      countColor: 'bg-rose-100 text-rose-800',
     },
+  ];
+
+  const futureDesignItems = [
     {
       id: 'data-flow',
       name: 'Request / Data Flow',

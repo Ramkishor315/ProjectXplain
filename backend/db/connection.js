@@ -134,6 +134,46 @@ connection.connect((error) => {
       console.error('Error ensuring api_endpoints table exists:', err.message);
     }
   });
+
+  // Ensure architecture_components table exists (Feature 7)
+  const createArchitectureComponentsTableQuery = `
+    CREATE TABLE IF NOT EXISTS architecture_components (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_id INT NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      type VARCHAR(50) NOT NULL,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `;
+
+  connection.query(createArchitectureComponentsTableQuery, (err) => {
+    if (err) {
+      console.error('Error ensuring architecture_components table exists:', err.message);
+    }
+  });
+
+  // Ensure architecture_connections table exists (Feature 7)
+  const createArchitectureConnectionsTableQuery = `
+    CREATE TABLE IF NOT EXISTS architecture_connections (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_id INT NOT NULL,
+      from_component_id INT NOT NULL,
+      to_component_id INT NOT NULL,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (from_component_id) REFERENCES architecture_components(id) ON DELETE CASCADE,
+      FOREIGN KEY (to_component_id) REFERENCES architecture_components(id) ON DELETE CASCADE
+    )
+  `;
+
+  connection.query(createArchitectureConnectionsTableQuery, (err) => {
+    if (err) {
+      console.error('Error ensuring architecture_connections table exists:', err.message);
+    }
+  });
 });
 
 module.exports = connection;

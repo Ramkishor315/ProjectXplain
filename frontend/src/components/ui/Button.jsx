@@ -34,6 +34,8 @@ function Button({
       'bg-amber-800 hover:bg-amber-900 text-white shadow-xs focus:ring-amber-600',
     neutral:
       'bg-stone-800 hover:bg-stone-900 text-white shadow-xs focus:ring-stone-500',
+    maroon:
+      'bg-rose-900 hover:bg-rose-950 text-white shadow-xs focus:ring-rose-800',
   };
 
   const combinedClasses = `${baseStyles} ${sizeStyles[size] || sizeStyles.md} ${
