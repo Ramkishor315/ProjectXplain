@@ -66,6 +66,8 @@ function App() {
   const [isSavingEntity, setIsSavingEntity] = useState(false);
   const [entityMessage, setEntityMessage] = useState('');
   const [isEntityError, setIsEntityError] = useState(false);
+  // openEntityMap: { [entityId]: boolean } - toggle open/collapse entity
+  const [openEntityMap, setOpenEntityMap] = useState({});
 
   // attributesMap: { [entityId]: array of attributes }
   const [attributesMap, setAttributesMap] = useState({});
@@ -261,6 +263,7 @@ function App() {
     setEntityMessage('');
     setShowAddRelForm(false);
     setRelMessage('');
+    setOpenEntityMap({});
 
     fetch(`${API_PROJECTS_URL}/${id}`)
       .then((response) => {
@@ -495,6 +498,7 @@ function App() {
     setEntityMessage('');
     setShowAddRelForm(false);
     setRelMessage('');
+    setOpenEntityMap({});
   }
 
   // =========================================================
@@ -1147,6 +1151,525 @@ function App() {
                       ))}
                     </div>
                   )}
+                </section>
+
+                <hr className="detail-divider" />
+
+                {/* =================================================== */}
+                {/* DATABASE DESIGN (Feature 5)                         */}
+                {/* =================================================== */}
+                <section className="database-section">
+                  <div className="database-header">
+                    <div>
+                      <h3>Database Design</h3>
+                      <p className="section-subtitle">
+                        Design the proposed database entities, attributes, and relationships.
+                      </p>
+                    </div>
+                    <button
+                      className="action-btn new-btn"
+                      onClick={() => {
+                        setShowAddEntityForm(!showAddEntityForm);
+                        setEntityMessage('');
+                      }}
+                    >
+                      {showAddEntityForm ? 'Close Form' : '+ Add Entity'}
+                    </button>
+                  </div>
+
+                  {/* Add Entity Form */}
+                  {showAddEntityForm && (
+                    <div className="entity-form-box">
+                      <h4>Add New Database Entity</h4>
+
+                      {entityMessage && (
+                        <div
+                          className={`message-box ${
+                            isEntityError ? 'error' : 'success'
+                          }`}
+                        >
+                          {entityMessage}
+                        </div>
+                      )}
+
+                      <form onSubmit={handleCreateEntity} className="project-form">
+                        <div className="form-group">
+                          <label htmlFor="entityName">Entity Name *</label>
+                          <input
+                            id="entityName"
+                            type="text"
+                            placeholder="e.g. users, orders, products"
+                            value={entityName}
+                            onChange={(e) => setEntityName(e.target.value)}
+                            disabled={isSavingEntity}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="entityDescription">Description</label>
+                          <textarea
+                            id="entityDescription"
+                            rows="2"
+                            placeholder="e.g. Stores registered user accounts and credentials"
+                            value={entityDescription}
+                            onChange={(e) => setEntityDescription(e.target.value)}
+                            disabled={isSavingEntity}
+                          />
+                        </div>
+
+                        <div className="form-actions">
+                          <button
+                            type="submit"
+                            className="submit-btn"
+                            disabled={isSavingEntity}
+                          >
+                            {isSavingEntity ? 'Saving...' : 'Save Entity'}
+                          </button>
+                          <button
+                            type="button"
+                            className="cancel-btn"
+                            onClick={() => {
+                              setShowAddEntityForm(false);
+                              setEntityMessage('');
+                            }}
+                            disabled={isSavingEntity}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Entities List */}
+                  {loadingEntities ? (
+                    <p className="empty-text">Loading database entities...</p>
+                  ) : entities.length === 0 ? (
+                    <div className="empty-box">
+                      <p className="empty-text">No database entities created yet.</p>
+                      <button
+                        className="action-btn new-btn"
+                        onClick={() => {
+                          setShowAddEntityForm(true);
+                          setEntityMessage('');
+                        }}
+                      >
+                        + Add First Entity
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="entities-list">
+                      {entities.map((entity) => {
+                        const entityAttrs = attributesMap[entity.id] || [];
+                        const isOpen = openEntityMap[entity.id] !== false; // open by default
+
+                        return (
+                          <article key={entity.id} className="entity-card">
+                            <div className="entity-card-top">
+                              <div className="entity-title-group">
+                                <span className="entity-icon">🗄️</span>
+                                <h4 className="entity-name">{entity.name}</h4>
+                                <span className="attribute-count-badge">
+                                  {entityAttrs.length} {entityAttrs.length === 1 ? 'attribute' : 'attributes'}
+                                </span>
+                              </div>
+                              <div className="entity-top-actions">
+                                <button
+                                  className="action-btn toggle-open-btn"
+                                  onClick={() =>
+                                    setOpenEntityMap((prev) => ({
+                                      ...prev,
+                                      [entity.id]: !isOpen,
+                                    }))
+                                  }
+                                >
+                                  {isOpen ? '▲ Collapse' : '▼ Open Entity'}
+                                </button>
+                                <button
+                                  className="delete-btn"
+                                  onClick={() => handleDeleteEntity(entity.id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+
+                            {entity.description && (
+                              <p className="entity-description">{entity.description}</p>
+                            )}
+
+                            {/* Attributes Section inside Entity (shown when open) */}
+                            {isOpen && (
+                              <div className="attributes-section">
+                                <div className="attributes-header">
+                                  <h5>Attributes</h5>
+                                  <button
+                                    className="action-btn attr-add-btn"
+                                    onClick={() =>
+                                      setShowAttrFormMap((prev) => ({
+                                        ...prev,
+                                        [entity.id]: !prev[entity.id],
+                                      }))
+                                    }
+                                  >
+                                    {showAttrFormMap[entity.id]
+                                      ? 'Close Form'
+                                      : '+ Add Attribute'}
+                                  </button>
+                                </div>
+
+                                {/* Add Attribute Form */}
+                                {showAttrFormMap[entity.id] && (
+                                  <div className="attr-form-box">
+                                    <h6>Add Attribute to {entity.name}</h6>
+                                    {attrErrorMap[entity.id] && (
+                                      <div className="message-box error">
+                                        {attrErrorMap[entity.id]}
+                                      </div>
+                                    )}
+                                    <form
+                                      onSubmit={(e) => handleCreateAttribute(e, entity.id)}
+                                      className="project-form attr-form"
+                                    >
+                                      <div className="form-group">
+                                        <label htmlFor={`attrName-${entity.id}`}>
+                                          Attribute Name *
+                                        </label>
+                                        <input
+                                          id={`attrName-${entity.id}`}
+                                          type="text"
+                                          placeholder="e.g. id, email, total_amount"
+                                          value={(attrInputMap[entity.id] || {}).name || ''}
+                                          onChange={(e) =>
+                                            setAttrInputMap((prev) => ({
+                                              ...prev,
+                                              [entity.id]: {
+                                                ...(prev[entity.id] || { data_type: 'INT', key_type: 'None' }),
+                                                name: e.target.value,
+                                              },
+                                            }))
+                                          }
+                                          disabled={attrSavingMap[entity.id]}
+                                        />
+                                      </div>
+
+                                      <div className="form-row-2col">
+                                        <div className="form-group">
+                                          <label htmlFor={`attrDataType-${entity.id}`}>
+                                            Data Type
+                                          </label>
+                                          <select
+                                            id={`attrDataType-${entity.id}`}
+                                            value={(attrInputMap[entity.id] || {}).data_type || 'INT'}
+                                            onChange={(e) =>
+                                              setAttrInputMap((prev) => ({
+                                                ...prev,
+                                                [entity.id]: {
+                                                  ...(prev[entity.id] || { name: '', key_type: 'None' }),
+                                                  data_type: e.target.value,
+                                                },
+                                              }))
+                                            }
+                                            disabled={attrSavingMap[entity.id]}
+                                            className="priority-select"
+                                          >
+                                            <option value="INT">INT</option>
+                                            <option value="VARCHAR">VARCHAR</option>
+                                            <option value="TEXT">TEXT</option>
+                                            <option value="DATE">DATE</option>
+                                            <option value="BOOLEAN">BOOLEAN</option>
+                                            <option value="DECIMAL">DECIMAL</option>
+                                          </select>
+                                        </div>
+
+                                        <div className="form-group">
+                                          <label htmlFor={`attrKeyType-${entity.id}`}>
+                                            Key Type
+                                          </label>
+                                          <select
+                                            id={`attrKeyType-${entity.id}`}
+                                            value={(attrInputMap[entity.id] || {}).key_type || 'None'}
+                                            onChange={(e) =>
+                                              setAttrInputMap((prev) => ({
+                                                ...prev,
+                                                [entity.id]: {
+                                                  ...(prev[entity.id] || { name: '', data_type: 'INT' }),
+                                                  key_type: e.target.value,
+                                                },
+                                              }))
+                                            }
+                                            disabled={attrSavingMap[entity.id]}
+                                            className="priority-select"
+                                          >
+                                            <option value="None">None</option>
+                                            <option value="Primary Key">Primary Key</option>
+                                            <option value="Foreign Key">Foreign Key</option>
+                                          </select>
+                                        </div>
+                                      </div>
+
+                                      <div className="form-actions">
+                                        <button
+                                          type="submit"
+                                          className="submit-btn"
+                                          disabled={attrSavingMap[entity.id]}
+                                        >
+                                          {attrSavingMap[entity.id] ? 'Saving...' : 'Save Attribute'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="cancel-btn"
+                                          onClick={() =>
+                                            setShowAttrFormMap((prev) => ({
+                                              ...prev,
+                                              [entity.id]: false,
+                                            }))
+                                          }
+                                          disabled={attrSavingMap[entity.id]}
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </form>
+                                  </div>
+                                )}
+
+                                {/* Attributes List / Table */}
+                                {entityAttrs.length === 0 ? (
+                                  <p className="empty-text attr-empty-text">
+                                    No attributes added yet. Click "+ Add Attribute" to define columns.
+                                  </p>
+                                ) : (
+                                  <div className="attributes-table-wrapper">
+                                    <table className="attributes-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Attribute Name</th>
+                                          <th>Data Type</th>
+                                          <th>Key Type</th>
+                                          <th className="th-action">Action</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {entityAttrs.map((attr) => (
+                                          <tr key={attr.id} className="attribute-row">
+                                            <td className="attr-name-cell">
+                                              <code>{attr.name}</code>
+                                            </td>
+                                            <td className="attr-type-cell">
+                                              <span className="type-badge">
+                                                {attr.data_type}
+                                              </span>
+                                            </td>
+                                            <td className="attr-key-cell">
+                                              {attr.key_type === 'Primary Key' ? (
+                                                <span className="key-badge key-pk">
+                                                  PK (Primary Key)
+                                                </span>
+                                              ) : attr.key_type === 'Foreign Key' ? (
+                                                <span className="key-badge key-fk">
+                                                  FK (Foreign Key)
+                                                </span>
+                                              ) : (
+                                                <span className="key-badge key-none">
+                                                  None
+                                                </span>
+                                              )}
+                                            </td>
+                                            <td className="attr-action-cell">
+                                              <button
+                                                className="delete-btn delete-btn-small"
+                                                onClick={() =>
+                                                  handleDeleteAttribute(attr.id, entity.id)
+                                                }
+                                                title="Delete attribute"
+                                              >
+                                                Delete
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* =================================================== */}
+                  {/* ENTITY RELATIONSHIPS SUB-SECTION                    */}
+                  {/* =================================================== */}
+                  <div className="relationships-section">
+                    <div className="relationships-header">
+                      <div>
+                        <h4>Entity Relationships</h4>
+                        <p className="section-subtitle">
+                          Connect entities using One-to-One, One-to-Many, or Many-to-Many relations.
+                        </p>
+                      </div>
+                      <button
+                        className="action-btn new-btn"
+                        onClick={() => {
+                          setShowAddRelForm(!showAddRelForm);
+                          setRelMessage('');
+                        }}
+                        disabled={entities.length < 2}
+                        title={
+                          entities.length < 2
+                            ? 'Create at least 2 entities to define relationships'
+                            : '+ Add Relationship'
+                        }
+                      >
+                        {showAddRelForm ? 'Close Form' : '+ Add Relationship'}
+                      </button>
+                    </div>
+
+                    {entities.length < 2 && (
+                      <p className="info-text">
+                        Tip: You need at least 2 entities to create relationships between them.
+                      </p>
+                    )}
+
+                    {/* Add Relationship Form */}
+                    {showAddRelForm && (
+                      <div className="relationship-form-box">
+                        <h5>Add Relationship</h5>
+
+                        {relMessage && (
+                          <div
+                            className={`message-box ${
+                              isRelError ? 'error' : 'success'
+                            }`}
+                          >
+                            {relMessage}
+                          </div>
+                        )}
+
+                        <form
+                          onSubmit={handleCreateRelationship}
+                          className="project-form"
+                        >
+                          <div className="form-row-2col">
+                            <div className="form-group">
+                              <label htmlFor="relFromEntity">From Entity *</label>
+                              <select
+                                id="relFromEntity"
+                                value={relFromEntityId}
+                                onChange={(e) => setRelFromEntityId(e.target.value)}
+                                disabled={isSavingRel}
+                                className="priority-select"
+                              >
+                                <option value="">-- Select From Entity --</option>
+                                {entities.map((ent) => (
+                                  <option key={ent.id} value={ent.id}>
+                                    {ent.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="form-group">
+                              <label htmlFor="relToEntity">To Entity *</label>
+                              <select
+                                id="relToEntity"
+                                value={relToEntityId}
+                                onChange={(e) => setRelToEntityId(e.target.value)}
+                                disabled={isSavingRel}
+                                className="priority-select"
+                              >
+                                <option value="">-- Select To Entity --</option>
+                                {entities.map((ent) => (
+                                  <option key={ent.id} value={ent.id}>
+                                    {ent.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="form-group">
+                            <label htmlFor="relType">Relationship Type *</label>
+                            <select
+                              id="relType"
+                              value={relType}
+                              onChange={(e) => setRelType(e.target.value)}
+                              disabled={isSavingRel}
+                              className="priority-select"
+                            >
+                              <option value="One-to-One">One-to-One</option>
+                              <option value="One-to-Many">One-to-Many</option>
+                              <option value="Many-to-Many">Many-to-Many</option>
+                            </select>
+                          </div>
+
+                          <div className="form-actions">
+                            <button
+                              type="submit"
+                              className="submit-btn"
+                              disabled={isSavingRel}
+                            >
+                              {isSavingRel ? 'Saving...' : 'Save Relationship'}
+                            </button>
+                            <button
+                              type="button"
+                              className="cancel-btn"
+                              onClick={() => {
+                                setShowAddRelForm(false);
+                                setRelMessage('');
+                              }}
+                              disabled={isSavingRel}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Relationships List */}
+                    {loadingRelationships ? (
+                      <p className="empty-text">Loading relationships...</p>
+                    ) : dbRelationships.length === 0 ? (
+                      <p className="empty-text">No relationships defined yet.</p>
+                    ) : (
+                      <div className="relationships-list">
+                        {dbRelationships.map((rel) => (
+                          <div key={rel.id} className="relationship-card">
+                            <div className="rel-card-left">
+                              <div className="rel-flow">
+                                <span className="rel-entity-pill">
+                                  {rel.from_entity_name || `Entity #${rel.from_entity_id}`}
+                                </span>
+                                <span className="rel-connector">
+                                  <span className="rel-line"></span>
+                                  <span className="rel-type-tag">
+                                    {rel.relationship_type}
+                                  </span>
+                                  <span className="rel-arrow">➔</span>
+                                </span>
+                                <span className="rel-entity-pill">
+                                  {rel.to_entity_name || `Entity #${rel.to_entity_id}`}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="rel-card-right">
+                              <button
+                                className="delete-btn delete-btn-small"
+                                onClick={() => handleDeleteRelationship(rel.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </section>
               </div>
             ) : null}

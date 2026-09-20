@@ -246,7 +246,7 @@ function getRelationships(req, res) {
     return res.status(400).json({ error: 'Invalid project ID' });
   }
 
-  // Join to get entity names for display
+  // Left join to get entity names for display even if referenced row differs
   const sql = `
     SELECT
       er.id,
@@ -255,11 +255,11 @@ function getRelationships(req, res) {
       er.to_entity_id,
       er.relationship_type,
       er.created_at,
-      fe.name AS from_entity_name,
-      te.name AS to_entity_name
+      COALESCE(fe.name, 'Unknown Entity') AS from_entity_name,
+      COALESCE(te.name, 'Unknown Entity') AS to_entity_name
     FROM entity_relationships er
-    JOIN database_entities fe ON er.from_entity_id = fe.id
-    JOIN database_entities te ON er.to_entity_id = te.id
+    LEFT JOIN database_entities fe ON er.from_entity_id = fe.id
+    LEFT JOIN database_entities te ON er.to_entity_id = te.id
     WHERE er.project_id = ?
     ORDER BY er.created_at ASC
   `;
