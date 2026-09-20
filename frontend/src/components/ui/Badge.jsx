@@ -23,6 +23,10 @@ function Badge({
     put: 'bg-amber-100 text-amber-900 border border-amber-300 font-mono font-bold tracking-wider',
     patch: 'bg-rose-50 text-rose-900 border border-rose-200 font-mono font-bold tracking-wider',
     delete: 'bg-red-50 text-red-700 border border-red-200 font-mono font-bold tracking-wider',
+    sql: 'bg-stone-100 text-stone-800 border border-stone-300 font-mono font-bold tracking-wider',
+    json: 'bg-amber-50 text-amber-900 border border-amber-200 font-mono font-bold tracking-wider',
+    internal: 'bg-stone-50 text-stone-700 border border-stone-200 font-mono font-bold tracking-wider',
+    other: 'bg-stone-100 text-stone-600 border border-stone-200 font-mono font-bold tracking-wider',
   };
 
   const chosenVariant = variantStyles[variant.toLowerCase()] || variantStyles.default;

@@ -10,6 +10,7 @@ const userStoryRoutes = require('./routes/userStories');
 const databaseRoutes = require('./routes/database');
 const apiRoutes = require('./routes/apis');
 const architectureRoutes = require('./routes/architecture');
+const dataFlowRoutes = require('./routes/dataFlow');
 
 const app = express();
 
@@ -31,5 +32,6 @@ app.use('/api', userStoryRoutes);
 app.use('/api', databaseRoutes);
 app.use('/api', apiRoutes);
 app.use('/api', architectureRoutes);
+app.use('/api', dataFlowRoutes);
 
 module.exports = app;

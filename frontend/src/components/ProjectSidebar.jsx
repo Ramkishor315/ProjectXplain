@@ -47,15 +47,16 @@ function ProjectSidebar({ activeSection, onSelectSection, counts }) {
       count: counts?.components,
       countColor: 'bg-rose-100 text-rose-800',
     },
-  ];
-
-  const futureDesignItems = [
     {
       id: 'data-flow',
       name: 'Request / Data Flow',
       icon: <DataFlowIcon className="w-4 h-4 shrink-0" />,
-      isPlaceholder: true,
+      count: counts?.dataFlow,
+      countColor: 'bg-stone-200 text-stone-800',
     },
+  ];
+
+  const futureDesignItems = [
     {
       id: 'cse-concepts',
       name: 'CSE Concepts',

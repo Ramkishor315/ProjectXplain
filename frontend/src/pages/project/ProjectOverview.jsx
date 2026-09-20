@@ -128,10 +128,16 @@ function ProjectOverview({
 
         <div className="mt-3 flex items-center justify-between text-xs text-stone-500">
           <span className="flex items-center gap-1 text-stone-700 font-medium">
-            Next Step <ArrowRightIcon className="w-3.5 h-3.5 text-red-600" /> <span className="text-red-700 font-semibold">System Architecture</span>
+            Next Step <ArrowRightIcon className="w-3.5 h-3.5 text-red-600" />{' '}
+            <span className="text-red-700 font-semibold">
+              {safeModules.find((m) => !m.completed)?.name || 'All Milestones Complete'}
+            </span>
           </span>
           <span className="text-stone-400 text-[11px]">
-            Milestone 6 in progress
+            {(() => {
+              const nextMod = safeModules.find((m) => !m.completed);
+              return nextMod ? `Milestone ${nextMod.id} in progress` : '100% Ready';
+            })()}
           </span>
         </div>
       </div>

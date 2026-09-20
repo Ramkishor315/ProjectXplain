@@ -174,6 +174,32 @@ connection.connect((error) => {
       console.error('Error ensuring architecture_connections table exists:', err.message);
     }
   });
+
+  // Ensure data_flow_steps table exists (Feature 8)
+  const createDataFlowStepsTableQuery = `
+    CREATE TABLE IF NOT EXISTS data_flow_steps (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_id INT NOT NULL,
+      step_number INT NOT NULL,
+      from_component_id INT NOT NULL,
+      to_component_id INT NOT NULL,
+      api_id INT NULL,
+      action VARCHAR(150) NOT NULL,
+      method VARCHAR(30),
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (from_component_id) REFERENCES architecture_components(id) ON DELETE CASCADE,
+      FOREIGN KEY (to_component_id) REFERENCES architecture_components(id) ON DELETE CASCADE,
+      FOREIGN KEY (api_id) REFERENCES api_endpoints(id) ON DELETE SET NULL
+    )
+  `;
+
+  connection.query(createDataFlowStepsTableQuery, (err) => {
+    if (err) {
+      console.error('Error ensuring data_flow_steps table exists:', err.message);
+    }
+  });
 });
 
 module.exports = connection;

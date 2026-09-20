@@ -19,6 +19,7 @@ import UserStories from './pages/project/UserStories';
 import DatabaseDesign from './pages/project/DatabaseDesign';
 import ApiDesign from './pages/project/ApiDesign';
 import SystemArchitecture from './pages/project/SystemArchitecture';
+import DataFlow from './pages/project/DataFlow';
 import PlaceholderSection from './pages/project/PlaceholderSection';
 
 const API_PROJECTS_URL = 'http://localhost:4000/api/projects';
@@ -29,6 +30,7 @@ const API_ATTRIBUTES_URL = 'http://localhost:4000/api/attributes';
 const API_RELATIONSHIPS_URL = 'http://localhost:4000/api/relationships';
 const API_APIS_URL = 'http://localhost:4000/api/apis';
 const API_ARCHITECTURE_URL = 'http://localhost:4000/api/architecture';
+const API_DATA_FLOW_URL = 'http://localhost:4000/api/data-flow';
 
 function App() {
   // Navigation view state: 'dashboard' | 'create' | 'detail'
@@ -149,6 +151,21 @@ function App() {
   const [connMessage, setConnMessage] = useState('');
   const [isConnError, setIsConnError] = useState(false);
 
+  // Request / Data Flow states (Feature 8)
+  const [dataFlowSteps, setDataFlowSteps] = useState([]);
+  const [loadingDataFlowSteps, setLoadingDataFlowSteps] = useState(false);
+  const [showAddStepForm, setShowAddStepForm] = useState(false);
+  const [stepNumber, setStepNumber] = useState(1);
+  const [flowFromCompId, setFlowFromCompId] = useState('');
+  const [flowToCompId, setFlowToCompId] = useState('');
+  const [flowApiId, setFlowApiId] = useState('');
+  const [flowAction, setFlowAction] = useState('');
+  const [flowMethod, setFlowMethod] = useState('POST');
+  const [flowDescription, setFlowDescription] = useState('');
+  const [isSavingStep, setIsSavingStep] = useState(false);
+  const [flowMessage, setFlowMessage] = useState('');
+  const [isFlowError, setIsFlowError] = useState(false);
+
   // Roadmap progress modules
   const progressModules = [
     { id: 1, name: 'Project Created', completed: true },
@@ -157,7 +174,7 @@ function App() {
     { id: 4, name: 'Database Design', completed: entities.length > 0 },
     { id: 5, name: 'API Design', completed: apiEndpoints.length > 0 },
     { id: 6, name: 'System Architecture', completed: archComponents.length > 0 },
-    { id: 7, name: 'Request / Data Flow', completed: false },
+    { id: 7, name: 'Request / Data Flow', completed: dataFlowSteps.length > 0 },
     { id: 8, name: 'CSE Concepts', completed: false },
     { id: 9, name: 'AI Mentor', completed: false },
   ];
@@ -350,6 +367,25 @@ function App() {
       });
   }
 
+  // Fetch all data flow steps for a project (GET /api/projects/:projectId/data-flow)
+  function fetchDataFlowSteps(projectId) {
+    setLoadingDataFlowSteps(true);
+    fetch(`${API_PROJECTS_URL}/${projectId}/data-flow`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to fetch data flow steps');
+        return response.json();
+      })
+      .then((data) => {
+        setDataFlowSteps(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching data flow steps:', error);
+      })
+      .finally(() => {
+        setLoadingDataFlowSteps(false);
+      });
+  }
+
   // Load all projects on initial page mount
   useEffect(() => {
     fetchProjects();
@@ -406,6 +442,18 @@ function App() {
     setConnDescription('');
     setConnMessage('');
     setIsConnError(false);
+    setDataFlowSteps([]);
+    setLoadingDataFlowSteps(false);
+    setShowAddStepForm(false);
+    setStepNumber(1);
+    setFlowFromCompId('');
+    setFlowToCompId('');
+    setFlowApiId('');
+    setFlowAction('');
+    setFlowMethod('POST');
+    setFlowDescription('');
+    setFlowMessage('');
+    setIsFlowError(false);
     setActiveSection('overview');
 
     fetch(`${API_PROJECTS_URL}/${id}`)
@@ -427,6 +475,8 @@ function App() {
         // Fetch architecture data (Feature 7)
         fetchArchComponents(data.id);
         fetchArchConnections(data.id);
+        // Fetch data flow steps (Feature 8)
+        fetchDataFlowSteps(data.id);
       })
       .catch((error) => {
         setDetailError(error.message || 'Could not load project');
@@ -1053,6 +1103,89 @@ function App() {
       });
   }
 
+  // Handle creating a data flow step (POST /api/projects/:projectId/data-flow)
+  function handleCreateDataFlowStep(e) {
+    e.preventDefault();
+    const parsedStep = parseInt(stepNumber, 10);
+    if (isNaN(parsedStep) || parsedStep <= 0) {
+      setFlowMessage('Step number must be a positive integer');
+      setIsFlowError(true);
+      return;
+    }
+
+    if (!flowFromCompId || !flowToCompId) {
+      setFlowMessage('Please select both source and destination components');
+      setIsFlowError(true);
+      return;
+    }
+
+    if (Number(flowFromCompId) === Number(flowToCompId)) {
+      setFlowMessage('Source and destination components cannot be the same');
+      setIsFlowError(true);
+      return;
+    }
+
+    if (!flowAction.trim()) {
+      setFlowMessage('Please enter an action for this flow step');
+      setIsFlowError(true);
+      return;
+    }
+
+    setIsSavingStep(true);
+    setFlowMessage('');
+    setIsFlowError(false);
+
+    fetch(`${API_PROJECTS_URL}/${selectedProject.id}/data-flow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        step_number: parsedStep,
+        from_component_id: Number(flowFromCompId),
+        to_component_id: Number(flowToCompId),
+        api_id: flowApiId ? Number(flowApiId) : null,
+        action: flowAction.trim(),
+        method: flowMethod,
+        description: flowDescription.trim(),
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to save data flow step');
+        return response.json();
+      })
+      .then(() => {
+        setFlowAction('');
+        setFlowDescription('');
+        setShowAddStepForm(false);
+        setFlowMessage('');
+        fetchDataFlowSteps(selectedProject.id);
+      })
+      .catch((error) => {
+        setFlowMessage(error.message || 'Failed to save data flow step');
+        setIsFlowError(true);
+      })
+      .finally(() => {
+        setIsSavingStep(false);
+      });
+  }
+
+  // Handle deleting a data flow step (DELETE /api/data-flow/:id)
+  function handleDeleteDataFlowStep(stepId) {
+    const confirmed = window.confirm('Are you sure you want to delete this flow step?');
+    if (!confirmed) return;
+
+    fetch(`${API_DATA_FLOW_URL}/${stepId}`, { method: 'DELETE' })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to delete data flow step');
+        return response.json();
+      })
+      .then(() => {
+        setDataFlowSteps((prev) => prev.filter((s) => s.id !== stepId));
+      })
+      .catch((error) => {
+        alert(error.message || 'Error deleting data flow step');
+      });
+  }
+
   // Summary counts for sidebar and overview
   const counts = {
     requirements: requirements.length,
@@ -1064,6 +1197,7 @@ function App() {
     apis: apiEndpoints.length,
     components: archComponents.length,
     connections: archConnections.length,
+    dataFlow: dataFlowSteps.length,
   };
 
   return (
@@ -1437,11 +1571,34 @@ function App() {
                 )}
 
                 {activeSection === 'data-flow' && (
-                  <PlaceholderSection
-                    title="Request / Data Flow"
-                    subtitle="Step-by-step trace of how requests move through your system."
-                    icon={<DataFlowIcon className="w-8 h-8" />}
-                    description="Trace how an incoming user action or HTTP request travels through routers, controllers, services, database queries, and back to the client."
+                  <DataFlow
+                    dataFlowSteps={dataFlowSteps}
+                    loadingDataFlowSteps={loadingDataFlowSteps}
+                    showAddStepForm={showAddStepForm}
+                    setShowAddStepForm={setShowAddStepForm}
+                    stepNumber={stepNumber}
+                    setStepNumber={setStepNumber}
+                    flowFromCompId={flowFromCompId}
+                    setFlowFromCompId={setFlowFromCompId}
+                    flowToCompId={flowToCompId}
+                    setFlowToCompId={setFlowToCompId}
+                    flowApiId={flowApiId}
+                    setFlowApiId={setFlowApiId}
+                    flowAction={flowAction}
+                    setFlowAction={setFlowAction}
+                    flowMethod={flowMethod}
+                    setFlowMethod={setFlowMethod}
+                    flowDescription={flowDescription}
+                    setFlowDescription={setFlowDescription}
+                    isSavingStep={isSavingStep}
+                    flowMessage={flowMessage}
+                    setFlowMessage={setFlowMessage}
+                    isFlowError={isFlowError}
+                    handleCreateDataFlowStep={handleCreateDataFlowStep}
+                    handleDeleteDataFlowStep={handleDeleteDataFlowStep}
+                    components={archComponents}
+                    apiEndpoints={apiEndpoints}
+                    onNavigate={setActiveSection}
                   />
                 )}
 
