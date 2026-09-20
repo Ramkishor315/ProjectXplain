@@ -1,4 +1,24 @@
 import { useEffect, useState } from 'react';
+import Navbar from './components/Navbar';
+import Button from './components/ui/Button';
+import Card from './components/ui/Card';
+import Input from './components/ui/Input';
+import Textarea from './components/ui/Textarea';
+import EmptyState from './components/ui/EmptyState';
+import PageHeader from './components/ui/PageHeader';
+import {
+  ArchitectureIcon,
+  DataFlowIcon,
+  ConceptsIcon,
+  MentorIcon,
+} from './components/ui/Icons';
+import ProjectSidebar from './components/ProjectSidebar';
+import ProjectOverview from './pages/project/ProjectOverview';
+import Requirements from './pages/project/Requirements';
+import UserStories from './pages/project/UserStories';
+import DatabaseDesign from './pages/project/DatabaseDesign';
+import ApiDesign from './pages/project/ApiDesign';
+import PlaceholderSection from './pages/project/PlaceholderSection';
 
 const API_PROJECTS_URL = 'http://localhost:4000/api/projects';
 const API_REQUIREMENTS_URL = 'http://localhost:4000/api/requirements';
@@ -6,10 +26,13 @@ const API_USER_STORIES_URL = 'http://localhost:4000/api/user-stories';
 const API_ENTITIES_URL = 'http://localhost:4000/api/entities';
 const API_ATTRIBUTES_URL = 'http://localhost:4000/api/attributes';
 const API_RELATIONSHIPS_URL = 'http://localhost:4000/api/relationships';
+const API_APIS_URL = 'http://localhost:4000/api/apis';
 
 function App() {
   // Navigation view state: 'dashboard' | 'create' | 'detail'
   const [currentView, setCurrentView] = useState('dashboard');
+  // Active navigation section in Project Detail view
+  const [activeSection, setActiveSection] = useState('overview');
 
   // List of all projects
   const [projects, setProjects] = useState([]);
@@ -89,13 +112,27 @@ function App() {
   const [relMessage, setRelMessage] = useState('');
   const [isRelError, setIsRelError] = useState(false);
 
+  // API Design states (Feature 6)
+  const [apiEndpoints, setApiEndpoints] = useState([]);
+  const [loadingApiEndpoints, setLoadingApiEndpoints] = useState(false);
+  const [showAddApiForm, setShowAddApiForm] = useState(false);
+  const [apiName, setApiName] = useState('');
+  const [apiMethod, setApiMethod] = useState('GET');
+  const [apiEndpoint, setApiEndpoint] = useState('');
+  const [apiDescription, setApiDescription] = useState('');
+  const [apiRequestBody, setApiRequestBody] = useState('');
+  const [apiResponseBody, setApiResponseBody] = useState('');
+  const [isSavingApi, setIsSavingApi] = useState(false);
+  const [apiMessage, setApiMessage] = useState('');
+  const [isApiError, setIsApiError] = useState(false);
+
   // Roadmap progress modules
   const progressModules = [
     { id: 1, name: 'Project Created', completed: true },
     { id: 2, name: 'Requirements', completed: requirements.length > 0 },
-    { id: 3, name: 'User Stories / Use Cases', completed: Object.values(userStoriesMap).some((stories) => stories.length > 0) },
+    { id: 3, name: 'User Stories / Use Cases', completed: Object.values(userStoriesMap).some((stories) => Array.isArray(stories) && stories.length > 0) },
     { id: 4, name: 'Database Design', completed: entities.length > 0 },
-    { id: 5, name: 'API Design', completed: false },
+    { id: 5, name: 'API Design', completed: apiEndpoints.length > 0 },
     { id: 6, name: 'System Architecture', completed: false },
     { id: 7, name: 'Request / Data Flow', completed: false },
     { id: 8, name: 'CSE Concepts', completed: false },
@@ -233,6 +270,25 @@ function App() {
       });
   }
 
+  // Fetch all API designs for a project (GET /api/projects/:projectId/apis)
+  function fetchApiEndpoints(projectId) {
+    setLoadingApiEndpoints(true);
+    fetch(`${API_PROJECTS_URL}/${projectId}/apis`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to fetch API designs');
+        return response.json();
+      })
+      .then((data) => {
+        setApiEndpoints(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching API designs:', error);
+      })
+      .finally(() => {
+        setLoadingApiEndpoints(false);
+      });
+  }
+
   // Load all projects on initial page mount
   useEffect(() => {
     fetchProjects();
@@ -264,6 +320,16 @@ function App() {
     setShowAddRelForm(false);
     setRelMessage('');
     setOpenEntityMap({});
+    setApiEndpoints([]);
+    setShowAddApiForm(false);
+    setApiName('');
+    setApiMethod('GET');
+    setApiEndpoint('');
+    setApiDescription('');
+    setApiRequestBody('');
+    setApiResponseBody('');
+    setApiMessage('');
+    setActiveSection('overview');
 
     fetch(`${API_PROJECTS_URL}/${id}`)
       .then((response) => {
@@ -279,6 +345,8 @@ function App() {
         // Fetch database design data (Feature 5)
         fetchEntities(data.id);
         fetchRelationships(data.id);
+        // Fetch API design data (Feature 6)
+        fetchApiEndpoints(data.id);
       })
       .catch((error) => {
         setDetailError(error.message || 'Could not load project');
@@ -499,6 +567,16 @@ function App() {
     setShowAddRelForm(false);
     setRelMessage('');
     setOpenEntityMap({});
+    setApiEndpoints([]);
+    setShowAddApiForm(false);
+    setApiName('');
+    setApiMethod('GET');
+    setApiEndpoint('');
+    setApiDescription('');
+    setApiRequestBody('');
+    setApiResponseBody('');
+    setApiMessage('');
+    setActiveSection('overview');
   }
 
   // =========================================================
@@ -692,28 +770,120 @@ function App() {
       });
   }
 
-  return (
-    <main className="page">
-      <div className="container">
-        {/* Top Branding Section */}
-        <header className="intro">
-          <p className="eyebrow">ProjectXplain</p>
-          <h1>Understand your software project one idea at a time.</h1>
-          <p className="description">
-            ProjectXplain turns your project idea into simple, connected
-            explanations of its software engineering concepts.
-          </p>
-        </header>
+  // =========================================================
+  // FEATURE 6: API DESIGN HANDLERS
+  // =========================================================
 
-        {/* ========================================================= */}
-        {/* VIEW 1: DASHBOARD VIEW                                    */}
-        {/* ========================================================= */}
-        {currentView === 'dashboard' && (
-          <section className="card">
-            <div className="dashboard-header">
-              <h2>My Projects</h2>
-              <button
-                className="action-btn new-btn"
+  // Handle creating an API design (POST /api/projects/:projectId/apis)
+  function handleCreateApi(event) {
+    event.preventDefault();
+
+    if (!apiName.trim() || !apiEndpoint.trim()) {
+      setApiMessage('Please enter both API Name and Endpoint');
+      setIsApiError(true);
+      return;
+    }
+
+    setIsSavingApi(true);
+    setApiMessage('');
+
+    fetch(`${API_PROJECTS_URL}/${selectedProject.id}/apis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: apiName.trim(),
+        method: apiMethod,
+        endpoint: apiEndpoint.trim(),
+        description: apiDescription.trim(),
+        request_body: apiRequestBody.trim(),
+        response_body: apiResponseBody.trim(),
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to save API design');
+        return response.json();
+      })
+      .then(() => {
+        setApiName('');
+        setApiMethod('GET');
+        setApiEndpoint('');
+        setApiDescription('');
+        setApiRequestBody('');
+        setApiResponseBody('');
+        setShowAddApiForm(false);
+        setApiMessage('');
+        fetchApiEndpoints(selectedProject.id);
+      })
+      .catch((error) => {
+        setApiMessage(error.message || 'Failed to save API design');
+        setIsApiError(true);
+      })
+      .finally(() => {
+        setIsSavingApi(false);
+      });
+  }
+
+  // Handle deleting an API design (DELETE /api/apis/:id)
+  function handleDeleteApi(apiId) {
+    const confirmed = window.confirm('Are you sure you want to delete this API design?');
+    if (!confirmed) return;
+
+    fetch(`${API_APIS_URL}/${apiId}`, { method: 'DELETE' })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to delete API design');
+        return response.json();
+      })
+      .then(() => {
+        setApiEndpoints((prev) => prev.filter((api) => api.id !== apiId));
+      })
+      .catch((error) => {
+        alert(error.message || 'Error deleting API design');
+      });
+  }
+
+  // Summary counts for sidebar and overview
+  const counts = {
+    requirements: requirements.length,
+    userStories: Object.values(userStoriesMap || {}).reduce(
+      (acc, list) => acc + (Array.isArray(list) ? list.length : 0),
+      0
+    ),
+    entities: entities.length,
+    apis: apiEndpoints.length,
+  };
+
+  return (
+    <div className="min-h-screen bg-[#faf9f6] flex flex-col font-sans text-stone-900">
+      {/* Top Navigation Bar */}
+      <Navbar
+        currentView={currentView}
+        selectedProject={selectedProject}
+        onBackToDashboard={handleBackToDashboard}
+      />
+
+      {/* VIEW 1: DASHBOARD VIEW */}
+      {currentView === 'dashboard' && (
+        <div className="w-full max-w-[1520px] mx-auto px-4 sm:px-6 md:px-8 py-8 flex-1">
+          {/* Welcome Banner - Clean Off-White / Cream with Red Accent */}
+          <div className="bg-white border border-stone-200 border-l-4 border-l-red-600 rounded-lg p-6 sm:p-8 mb-8 shadow-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded inline-block mb-3">
+              CSE Learning Platform
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">
+              Understand your software project one idea at a time.
+            </h1>
+            <p className="text-stone-600 text-sm sm:text-base mt-2 max-w-3xl leading-relaxed font-sans">
+              ProjectXplain transforms raw software concepts into structured architectural blueprints — covering functional requirements, agile user stories, relational schemas, REST APIs, and core engineering principles.
+            </p>
+          </div>
+
+          {/* Section Header */}
+          <PageHeader
+            title="My Projects"
+            subtitle="Browse your active project workspaces or initiate a new system design."
+            action={
+              <Button
+                variant="primary"
                 onClick={() => {
                   setMessage('');
                   setIsError(false);
@@ -721,962 +891,341 @@ function App() {
                 }}
               >
                 + New Project
-              </button>
+              </Button>
+            }
+          />
+
+          {/* Feedback banner */}
+          {message && (
+            <div
+              className={`p-3.5 rounded text-xs sm:text-sm mb-6 ${
+                isError
+                  ? 'bg-red-50 text-red-800 border border-red-200'
+                  : 'bg-stone-100 text-stone-800 border border-stone-300'
+              }`}
+            >
+              {message}
             </div>
+          )}
 
-            {/* Feedback message banner */}
-            {message && (
-              <div className={`message-box ${isError ? 'error' : 'success'}`}>
-                {message}
-              </div>
-            )}
-
-            {loadingProjects ? (
-              <p className="empty-text">Loading projects...</p>
-            ) : projects.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-text">
-                  No projects found. Create your first project.
-                </p>
-                <button
-                  className="submit-btn"
+          {loadingProjects ? (
+            <div className="p-16 text-center text-xs sm:text-sm text-stone-500 bg-white border border-stone-200 rounded-lg">
+              Loading your projects...
+            </div>
+          ) : projects.length === 0 ? (
+            <EmptyState
+              title="No projects found"
+              message="Get started by creating your first software project blueprint."
+              action={
+                <Button
                   onClick={() => {
                     setMessage('');
                     setCurrentView('create');
                   }}
                 >
                   + New Project
-                </button>
-              </div>
-            ) : (
-              <div className="projects-list">
-                {projects.map((project) => (
-                  <article key={project.id} className="project-card">
-                    <div className="project-header">
-                      <h3 className="project-title">{project.name}</h3>
-                      <span className="project-date">
-                        Created: {formatDate(project.created_at)}
+                </Button>
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {projects.map((project) => (
+                <Card
+                  key={project.id}
+                  padding="p-5"
+                  className="flex flex-col justify-between border-stone-200 hover:border-red-300 hover:shadow-xs transition-all duration-150 group"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 pb-3 border-b border-stone-100">
+                      <h3 className="text-base sm:text-lg font-bold text-stone-900 group-hover:text-red-700 transition-colors">
+                        {project.name}
+                      </h3>
+                      <span className="text-[11px] font-medium text-stone-400 shrink-0">
+                        {formatDate(project.created_at)}
                       </span>
                     </div>
-                    <p className="project-idea">{project.idea}</p>
-                    <div className="card-actions">
-                      <button
-                        className="action-btn open-btn"
-                        onClick={() => openProject(project.id)}
-                      >
-                        Open Project
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+                    <p className="text-xs sm:text-sm text-stone-600 mt-3 line-clamp-3 leading-relaxed">
+                      {project.idea}
+                    </p>
+                  </div>
 
-        {/* ========================================================= */}
-        {/* VIEW 2: CREATE PROJECT VIEW                               */}
-        {/* ========================================================= */}
-        {currentView === 'create' && (
-          <section className="card">
-            <div className="section-header">
-              <h2>Create Project</h2>
-              <button
-                className="action-btn back-btn"
-                onClick={handleBackToDashboard}
-              >
-                ← Back to Dashboard
-              </button>
+                  <div className="mt-5 pt-3 border-t border-stone-100 flex justify-end">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => openProject(project.id)}
+                    >
+                      Open Project &rarr;
+                    </Button>
+                  </div>
+                </Card>
+              ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW 2: CREATE PROJECT VIEW */}
+      {currentView === 'create' && (
+        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-10 flex-1">
+          <Card padding="p-6 sm:p-8" className="border-stone-200">
+            <PageHeader
+              title="Create New Project"
+              subtitle="Describe your project vision and start architecting its modules."
+              action={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleBackToDashboard}
+                >
+                  &larr; Back
+                </Button>
+              }
+            />
 
             {message && (
-              <div className={`message-box ${isError ? 'error' : 'success'}`}>
+              <div
+                className={`p-3.5 rounded text-xs sm:text-sm mb-5 ${
+                  isError
+                    ? 'bg-red-50 text-red-800 border border-red-200'
+                    : 'bg-stone-100 text-stone-800 border border-stone-300'
+                }`}
+              >
                 {message}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="project-form">
-              <div className="form-group">
-                <label htmlFor="projectName">Project Name</label>
-                <input
-                  id="projectName"
-                  type="text"
-                  placeholder="e.g. CrickArena"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={isSubmitting}
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input
+                id="projectName"
+                label="Project Name"
+                required
+                placeholder="e.g. CrickArena, DevConnect, CodeReviewer"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isSubmitting}
+              />
 
-              <div className="form-group">
-                <label htmlFor="projectIdea">Project Idea</label>
-                <textarea
-                  id="projectIdea"
-                  rows="3"
-                  placeholder="e.g. A real time ball by ball scoring platform"
-                  value={idea}
-                  onChange={(e) => setIdea(e.target.value)}
-                  disabled={isSubmitting}
-                />
-              </div>
+              <Textarea
+                id="projectIdea"
+                label="Project Idea & Problem Statement"
+                required
+                rows={4}
+                placeholder="Describe what problem this project solves and the core features you envision..."
+                value={idea}
+                onChange={(e) => setIdea(e.target.value)}
+                disabled={isSubmitting}
+              />
 
-              <div className="form-actions">
-                <button
-                  type="submit"
-                  className="submit-btn"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Creating...' : 'Create Project'}
-                </button>
-                <button
+              <div className="flex items-center gap-3 pt-3 border-t border-stone-100">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating Project...' : 'Create Project'}
+                </Button>
+                <Button
                   type="button"
-                  className="cancel-btn"
+                  variant="secondary"
                   onClick={handleBackToDashboard}
                   disabled={isSubmitting}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
-          </section>
-        )}
+          </Card>
+        </div>
+      )}
 
-        {/* ========================================================= */}
-        {/* VIEW 3: PROJECT DETAIL VIEW                               */}
-        {/* ========================================================= */}
-        {currentView === 'detail' && (
-          <section className="card">
-            <div className="section-header">
-              <h2>Project Detail</h2>
-              <button
-                className="action-btn back-btn"
-                onClick={handleBackToDashboard}
-              >
-                ← Back to Dashboard
-              </button>
+      {/* VIEW 3: PROJECT DETAIL / WORKSPACE VIEW */}
+      {currentView === 'detail' && (
+        <div className="w-full max-w-[1520px] mx-auto px-4 sm:px-6 md:px-8 py-6 flex-1 flex flex-col">
+          {loadingDetail ? (
+            <div className="p-16 text-center text-xs sm:text-sm text-stone-500 bg-white rounded-lg border border-stone-200 shadow-2xs">
+              Loading project details...
             </div>
+          ) : detailError ? (
+            <div className="p-4 rounded text-xs sm:text-sm bg-red-50 text-red-800 border border-red-200">
+              {detailError}
+            </div>
+          ) : selectedProject ? (
+            <div className="bg-white border border-stone-200 rounded-lg shadow-2xs overflow-hidden flex flex-col md:flex-row flex-1 min-h-[700px]">
+              {/* Left Sidebar */}
+              <ProjectSidebar
+                activeSection={activeSection}
+                onSelectSection={setActiveSection}
+                counts={counts}
+              />
 
-            {loadingDetail ? (
-              <p className="empty-text">Loading project details...</p>
-            ) : detailError ? (
-              <div className="message-box error">{detailError}</div>
-            ) : selectedProject ? (
-              <div className="detail-container">
-                {/* Basic Project Info */}
-                <div className="detail-info">
-                  <div className="detail-field">
-                    <span className="field-label">Project Name:</span>
-                    <h3 className="detail-name">{selectedProject.name}</h3>
-                  </div>
+              {/* Main Content Area - Wide & Balanced */}
+              <main className="flex-1 min-w-0 p-5 sm:p-7 md:p-8 bg-white overflow-y-auto">
+                {activeSection === 'overview' && (
+                  <ProjectOverview
+                    project={selectedProject}
+                    formatDate={formatDate}
+                    progressModules={progressModules}
+                    counts={counts}
+                    onNavigate={setActiveSection}
+                  />
+                )}
 
-                  <div className="detail-field">
-                    <span className="field-label">Project Idea:</span>
-                    <p className="detail-idea">{selectedProject.idea}</p>
-                  </div>
+                {activeSection === 'requirements' && (
+                  <Requirements
+                    requirements={requirements}
+                    loadingRequirements={loadingRequirements}
+                    showAddReqForm={showAddReqForm}
+                    setShowAddReqForm={setShowAddReqForm}
+                    reqTitle={reqTitle}
+                    setReqTitle={setReqTitle}
+                    reqDescription={reqDescription}
+                    setReqDescription={setReqDescription}
+                    reqPriority={reqPriority}
+                    setReqPriority={setReqPriority}
+                    isSavingReq={isSavingReq}
+                    reqMessage={reqMessage}
+                    setReqMessage={setReqMessage}
+                    isReqError={isReqError}
+                    handleCreateRequirement={handleCreateRequirement}
+                    handleDeleteRequirement={handleDeleteRequirement}
+                    userStoriesMap={userStoriesMap}
+                    showStoryFormMap={showStoryFormMap}
+                    setShowStoryFormMap={setShowStoryFormMap}
+                    storyInputMap={storyInputMap}
+                    setStoryInputMap={setStoryInputMap}
+                    storyLoadingMap={storyLoadingMap}
+                    storySavingMap={storySavingMap}
+                    storyErrorMap={storyErrorMap}
+                    handleCreateUserStory={handleCreateUserStory}
+                    handleDeleteUserStory={handleDeleteUserStory}
+                  />
+                )}
 
-                  <div className="detail-field">
-                    <span className="field-label">Created Date:</span>
-                    <p className="detail-date">
-                      {formatDate(selectedProject.created_at)}
-                    </p>
-                  </div>
-                </div>
+                {activeSection === 'user-stories' && (
+                  <UserStories
+                    requirements={requirements}
+                    userStoriesMap={userStoriesMap}
+                    storyInputMap={storyInputMap}
+                    setStoryInputMap={setStoryInputMap}
+                    storySavingMap={storySavingMap}
+                    storyErrorMap={storyErrorMap}
+                    handleCreateUserStory={handleCreateUserStory}
+                    handleDeleteUserStory={handleDeleteUserStory}
+                    onNavigate={setActiveSection}
+                  />
+                )}
 
-                <hr className="detail-divider" />
+                {activeSection === 'database-design' && (
+                  <DatabaseDesign
+                    entities={entities}
+                    loadingEntities={loadingEntities}
+                    showAddEntityForm={showAddEntityForm}
+                    setShowAddEntityForm={setShowAddEntityForm}
+                    entityName={entityName}
+                    setEntityName={setEntityName}
+                    entityDescription={entityDescription}
+                    setEntityDescription={setEntityDescription}
+                    isSavingEntity={isSavingEntity}
+                    entityMessage={entityMessage}
+                    setEntityMessage={setEntityMessage}
+                    isEntityError={isEntityError}
+                    handleCreateEntity={handleCreateEntity}
+                    handleDeleteEntity={handleDeleteEntity}
+                    openEntityMap={openEntityMap}
+                    setOpenEntityMap={setOpenEntityMap}
+                    attributesMap={attributesMap}
+                    showAttrFormMap={showAttrFormMap}
+                    setShowAttrFormMap={setShowAttrFormMap}
+                    attrInputMap={attrInputMap}
+                    setAttrInputMap={setAttrInputMap}
+                    attrSavingMap={attrSavingMap}
+                    attrErrorMap={attrErrorMap}
+                    handleCreateAttribute={handleCreateAttribute}
+                    handleDeleteAttribute={handleDeleteAttribute}
+                    dbRelationships={dbRelationships}
+                    loadingRelationships={loadingRelationships}
+                    showAddRelForm={showAddRelForm}
+                    setShowAddRelForm={setShowAddRelForm}
+                    relFromEntityId={relFromEntityId}
+                    setRelFromEntityId={setRelFromEntityId}
+                    relToEntityId={relToEntityId}
+                    setRelToEntityId={setRelToEntityId}
+                    relType={relType}
+                    setRelType={setRelType}
+                    isSavingRel={isSavingRel}
+                    relMessage={relMessage}
+                    setRelMessage={setRelMessage}
+                    isRelError={isRelError}
+                    handleCreateRelationship={handleCreateRelationship}
+                    handleDeleteRelationship={handleDeleteRelationship}
+                  />
+                )}
 
-                {/* Progress Roadmap Section */}
-                <div className="progress-section">
-                  <h3 className="progress-title">Project Progress</h3>
-                  <div className="progress-list">
-                    {progressModules.map((module) => (
-                      <div
-                        key={module.id}
-                        className={`progress-item ${
-                          module.completed ? 'completed' : 'pending'
-                        }`}
-                      >
-                        <span className="progress-icon">
-                          {module.completed ? '✓' : '○'}
-                        </span>
-                        <span className="progress-name">{module.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {activeSection === 'api-design' && (
+                  <ApiDesign
+                    apiEndpoints={apiEndpoints}
+                    loadingApiEndpoints={loadingApiEndpoints}
+                    showAddApiForm={showAddApiForm}
+                    setShowAddApiForm={setShowAddApiForm}
+                    apiName={apiName}
+                    setApiName={setApiName}
+                    apiMethod={apiMethod}
+                    setApiMethod={setApiMethod}
+                    apiEndpoint={apiEndpoint}
+                    setApiEndpoint={setApiEndpoint}
+                    apiDescription={apiDescription}
+                    setApiDescription={setApiDescription}
+                    apiRequestBody={apiRequestBody}
+                    setApiRequestBody={setApiRequestBody}
+                    apiResponseBody={apiResponseBody}
+                    setApiResponseBody={setApiResponseBody}
+                    isSavingApi={isSavingApi}
+                    apiMessage={apiMessage}
+                    setApiMessage={setApiMessage}
+                    isApiError={isApiError}
+                    handleCreateApi={handleCreateApi}
+                    handleDeleteApi={handleDeleteApi}
+                  />
+                )}
 
-                <hr className="detail-divider" />
+                {activeSection === 'architecture' && (
+                  <PlaceholderSection
+                    title="System Architecture"
+                    subtitle="High-level components, services, and system topology."
+                    icon={<ArchitectureIcon className="w-8 h-8" />}
+                    description="Design your system components (frontend, backend, database, cache, message queues) and the structural connections between them."
+                  />
+                )}
 
-                {/* =================================================== */}
-                {/* REQUIREMENTS MANAGEMENT (Feature 3)                */}
-                {/* =================================================== */}
-                <section className="requirements-section">
-                  <div className="requirements-header">
-                    <h3>Requirements</h3>
-                    <button
-                      className="action-btn new-btn"
-                      onClick={() => {
-                        setShowAddReqForm(!showAddReqForm);
-                        setReqMessage('');
-                      }}
-                    >
-                      {showAddReqForm ? 'Close Form' : '+ Add Requirement'}
-                    </button>
-                  </div>
+                {activeSection === 'data-flow' && (
+                  <PlaceholderSection
+                    title="Request / Data Flow"
+                    subtitle="Step-by-step trace of how requests move through your system."
+                    icon={<DataFlowIcon className="w-8 h-8" />}
+                    description="Trace how an incoming user action or HTTP request travels through routers, controllers, services, database queries, and back to the client."
+                  />
+                )}
 
-                  {/* Add Requirement Form */}
-                  {showAddReqForm && (
-                    <div className="req-form-box">
-                      <h4>Add New Requirement</h4>
+                {activeSection === 'cse-concepts' && (
+                  <PlaceholderSection
+                    title="CSE Concepts"
+                    subtitle="Core Computer Science and Engineering principles applied in this project."
+                    icon={<ConceptsIcon className="w-8 h-8" />}
+                    description="Explore the software engineering patterns, algorithmic trade-offs, ACID properties, networking fundamentals, and database normalization used in your system."
+                  />
+                )}
 
-                      {reqMessage && (
-                        <div
-                          className={`message-box ${
-                            isReqError ? 'error' : 'success'
-                          }`}
-                        >
-                          {reqMessage}
-                        </div>
-                      )}
-
-                      <form
-                        onSubmit={handleCreateRequirement}
-                        className="project-form"
-                      >
-                        <div className="form-group">
-                          <label htmlFor="reqTitle">Requirement Title</label>
-                          <input
-                            id="reqTitle"
-                            type="text"
-                            placeholder="e.g. User Login"
-                            value={reqTitle}
-                            onChange={(e) => setReqTitle(e.target.value)}
-                            disabled={isSavingReq}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label htmlFor="reqDescription">Description</label>
-                          <textarea
-                            id="reqDescription"
-                            rows="3"
-                            placeholder="e.g. Users should be able to login to the system"
-                            value={reqDescription}
-                            onChange={(e) => setReqDescription(e.target.value)}
-                            disabled={isSavingReq}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label htmlFor="reqPriority">Priority</label>
-                          <select
-                            id="reqPriority"
-                            value={reqPriority}
-                            onChange={(e) => setReqPriority(e.target.value)}
-                            disabled={isSavingReq}
-                            className="priority-select"
-                          >
-                            <option value="High">High</option>
-                            <option value="Medium">Medium</option>
-                            <option value="Low">Low</option>
-                          </select>
-                        </div>
-
-                        <div className="form-actions">
-                          <button
-                            type="submit"
-                            className="submit-btn"
-                            disabled={isSavingReq}
-                          >
-                            {isSavingReq ? 'Saving...' : 'Save Requirement'}
-                          </button>
-                          <button
-                            type="button"
-                            className="cancel-btn"
-                            onClick={() => {
-                              setShowAddReqForm(false);
-                              setReqMessage('');
-                            }}
-                            disabled={isSavingReq}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
-
-                  {/* Requirements List */}
-                  {loadingRequirements ? (
-                    <p className="empty-text">Loading requirements...</p>
-                  ) : requirements.length === 0 ? (
-                    <p className="empty-text">No requirements added yet.</p>
-                  ) : (
-                    <div className="requirements-list">
-                      {requirements.map((req) => (
-                        <article key={req.id} className="requirement-card">
-                          <div className="req-card-top">
-                            <h4 className="req-title">{req.title}</h4>
-                            <span
-                              className={`priority-badge priority-${req.priority.toLowerCase()}`}
-                            >
-                              Priority: {req.priority}
-                            </span>
-                          </div>
-                          <p className="req-description">{req.description}</p>
-                          <div className="req-card-bottom">
-                            <button
-                              className="delete-btn"
-                              onClick={() => handleDeleteRequirement(req.id)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-
-                          {/* ========================================= */}
-                          {/* USER STORIES SECTION (Feature 4)         */}
-                          {/* ========================================= */}
-                          <div className="user-stories-section">
-                            <div className="user-stories-header">
-                              <h5>User Stories / Use Cases</h5>
-                              <button
-                                className="action-btn story-add-btn"
-                                onClick={() =>
-                                  setShowStoryFormMap((prev) => ({
-                                    ...prev,
-                                    [req.id]: !prev[req.id],
-                                  }))
-                                }
-                              >
-                                {showStoryFormMap[req.id] ? 'Close' : '+ Add User Story'}
-                              </button>
-                            </div>
-
-                            {/* Add User Story Form */}
-                            {showStoryFormMap[req.id] && (
-                              <div className="story-form-box">
-                                {storyErrorMap[req.id] && (
-                                  <div className="message-box error">
-                                    {storyErrorMap[req.id]}
-                                  </div>
-                                )}
-                                <form
-                                  onSubmit={(e) => handleCreateUserStory(e, req.id)}
-                                  className="project-form"
-                                >
-                                  <div className="form-group">
-                                    <label htmlFor={`storyTitle-${req.id}`}>Title</label>
-                                    <input
-                                      id={`storyTitle-${req.id}`}
-                                      type="text"
-                                      placeholder="e.g. User Login"
-                                      value={(storyInputMap[req.id] || {}).title || ''}
-                                      onChange={(e) =>
-                                        setStoryInputMap((prev) => ({
-                                          ...prev,
-                                          [req.id]: { ...(prev[req.id] || {}), title: e.target.value },
-                                        }))
-                                      }
-                                      disabled={storySavingMap[req.id]}
-                                    />
-                                  </div>
-                                  <div className="form-group">
-                                    <label htmlFor={`storyDesc-${req.id}`}>Description</label>
-                                    <textarea
-                                      id={`storyDesc-${req.id}`}
-                                      rows="3"
-                                      placeholder="e.g. As a user, I want to login using my email and password so that I can access my account."
-                                      value={(storyInputMap[req.id] || {}).description || ''}
-                                      onChange={(e) =>
-                                        setStoryInputMap((prev) => ({
-                                          ...prev,
-                                          [req.id]: { ...(prev[req.id] || {}), description: e.target.value },
-                                        }))
-                                      }
-                                      disabled={storySavingMap[req.id]}
-                                    />
-                                  </div>
-                                  <div className="form-actions">
-                                    <button
-                                      type="submit"
-                                      className="submit-btn"
-                                      disabled={storySavingMap[req.id]}
-                                    >
-                                      {storySavingMap[req.id] ? 'Saving...' : 'Save User Story'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="cancel-btn"
-                                      onClick={() =>
-                                        setShowStoryFormMap((prev) => ({
-                                          ...prev,
-                                          [req.id]: false,
-                                        }))
-                                      }
-                                      disabled={storySavingMap[req.id]}
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                </form>
-                              </div>
-                            )}
-
-                            {/* User Stories List */}
-                            {storyLoadingMap[req.id] ? (
-                              <p className="empty-text">Loading user stories...</p>
-                            ) : !userStoriesMap[req.id] || userStoriesMap[req.id].length === 0 ? (
-                              <p className="empty-text">No user stories added yet.</p>
-                            ) : (
-                              <div className="stories-list">
-                                {userStoriesMap[req.id].map((story) => (
-                                  <div key={story.id} className="story-card">
-                                    <div className="story-card-top">
-                                      <h6 className="story-title">{story.title}</h6>
-                                    </div>
-                                    <p className="story-description">{story.description}</p>
-                                    <div className="story-card-bottom">
-                                      <button
-                                        className="delete-btn"
-                                        onClick={() => handleDeleteUserStory(story.id, req.id)}
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </section>
-
-                <hr className="detail-divider" />
-
-                {/* =================================================== */}
-                {/* DATABASE DESIGN (Feature 5)                         */}
-                {/* =================================================== */}
-                <section className="database-section">
-                  <div className="database-header">
-                    <div>
-                      <h3>Database Design</h3>
-                      <p className="section-subtitle">
-                        Design the proposed database entities, attributes, and relationships.
-                      </p>
-                    </div>
-                    <button
-                      className="action-btn new-btn"
-                      onClick={() => {
-                        setShowAddEntityForm(!showAddEntityForm);
-                        setEntityMessage('');
-                      }}
-                    >
-                      {showAddEntityForm ? 'Close Form' : '+ Add Entity'}
-                    </button>
-                  </div>
-
-                  {/* Add Entity Form */}
-                  {showAddEntityForm && (
-                    <div className="entity-form-box">
-                      <h4>Add New Database Entity</h4>
-
-                      {entityMessage && (
-                        <div
-                          className={`message-box ${
-                            isEntityError ? 'error' : 'success'
-                          }`}
-                        >
-                          {entityMessage}
-                        </div>
-                      )}
-
-                      <form onSubmit={handleCreateEntity} className="project-form">
-                        <div className="form-group">
-                          <label htmlFor="entityName">Entity Name *</label>
-                          <input
-                            id="entityName"
-                            type="text"
-                            placeholder="e.g. users, orders, products"
-                            value={entityName}
-                            onChange={(e) => setEntityName(e.target.value)}
-                            disabled={isSavingEntity}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label htmlFor="entityDescription">Description</label>
-                          <textarea
-                            id="entityDescription"
-                            rows="2"
-                            placeholder="e.g. Stores registered user accounts and credentials"
-                            value={entityDescription}
-                            onChange={(e) => setEntityDescription(e.target.value)}
-                            disabled={isSavingEntity}
-                          />
-                        </div>
-
-                        <div className="form-actions">
-                          <button
-                            type="submit"
-                            className="submit-btn"
-                            disabled={isSavingEntity}
-                          >
-                            {isSavingEntity ? 'Saving...' : 'Save Entity'}
-                          </button>
-                          <button
-                            type="button"
-                            className="cancel-btn"
-                            onClick={() => {
-                              setShowAddEntityForm(false);
-                              setEntityMessage('');
-                            }}
-                            disabled={isSavingEntity}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
-
-                  {/* Entities List */}
-                  {loadingEntities ? (
-                    <p className="empty-text">Loading database entities...</p>
-                  ) : entities.length === 0 ? (
-                    <div className="empty-box">
-                      <p className="empty-text">No database entities created yet.</p>
-                      <button
-                        className="action-btn new-btn"
-                        onClick={() => {
-                          setShowAddEntityForm(true);
-                          setEntityMessage('');
-                        }}
-                      >
-                        + Add First Entity
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="entities-list">
-                      {entities.map((entity) => {
-                        const entityAttrs = attributesMap[entity.id] || [];
-                        const isOpen = openEntityMap[entity.id] !== false; // open by default
-
-                        return (
-                          <article key={entity.id} className="entity-card">
-                            <div className="entity-card-top">
-                              <div className="entity-title-group">
-                                <span className="entity-icon">🗄️</span>
-                                <h4 className="entity-name">{entity.name}</h4>
-                                <span className="attribute-count-badge">
-                                  {entityAttrs.length} {entityAttrs.length === 1 ? 'attribute' : 'attributes'}
-                                </span>
-                              </div>
-                              <div className="entity-top-actions">
-                                <button
-                                  className="action-btn toggle-open-btn"
-                                  onClick={() =>
-                                    setOpenEntityMap((prev) => ({
-                                      ...prev,
-                                      [entity.id]: !isOpen,
-                                    }))
-                                  }
-                                >
-                                  {isOpen ? '▲ Collapse' : '▼ Open Entity'}
-                                </button>
-                                <button
-                                  className="delete-btn"
-                                  onClick={() => handleDeleteEntity(entity.id)}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </div>
-
-                            {entity.description && (
-                              <p className="entity-description">{entity.description}</p>
-                            )}
-
-                            {/* Attributes Section inside Entity (shown when open) */}
-                            {isOpen && (
-                              <div className="attributes-section">
-                                <div className="attributes-header">
-                                  <h5>Attributes</h5>
-                                  <button
-                                    className="action-btn attr-add-btn"
-                                    onClick={() =>
-                                      setShowAttrFormMap((prev) => ({
-                                        ...prev,
-                                        [entity.id]: !prev[entity.id],
-                                      }))
-                                    }
-                                  >
-                                    {showAttrFormMap[entity.id]
-                                      ? 'Close Form'
-                                      : '+ Add Attribute'}
-                                  </button>
-                                </div>
-
-                                {/* Add Attribute Form */}
-                                {showAttrFormMap[entity.id] && (
-                                  <div className="attr-form-box">
-                                    <h6>Add Attribute to {entity.name}</h6>
-                                    {attrErrorMap[entity.id] && (
-                                      <div className="message-box error">
-                                        {attrErrorMap[entity.id]}
-                                      </div>
-                                    )}
-                                    <form
-                                      onSubmit={(e) => handleCreateAttribute(e, entity.id)}
-                                      className="project-form attr-form"
-                                    >
-                                      <div className="form-group">
-                                        <label htmlFor={`attrName-${entity.id}`}>
-                                          Attribute Name *
-                                        </label>
-                                        <input
-                                          id={`attrName-${entity.id}`}
-                                          type="text"
-                                          placeholder="e.g. id, email, total_amount"
-                                          value={(attrInputMap[entity.id] || {}).name || ''}
-                                          onChange={(e) =>
-                                            setAttrInputMap((prev) => ({
-                                              ...prev,
-                                              [entity.id]: {
-                                                ...(prev[entity.id] || { data_type: 'INT', key_type: 'None' }),
-                                                name: e.target.value,
-                                              },
-                                            }))
-                                          }
-                                          disabled={attrSavingMap[entity.id]}
-                                        />
-                                      </div>
-
-                                      <div className="form-row-2col">
-                                        <div className="form-group">
-                                          <label htmlFor={`attrDataType-${entity.id}`}>
-                                            Data Type
-                                          </label>
-                                          <select
-                                            id={`attrDataType-${entity.id}`}
-                                            value={(attrInputMap[entity.id] || {}).data_type || 'INT'}
-                                            onChange={(e) =>
-                                              setAttrInputMap((prev) => ({
-                                                ...prev,
-                                                [entity.id]: {
-                                                  ...(prev[entity.id] || { name: '', key_type: 'None' }),
-                                                  data_type: e.target.value,
-                                                },
-                                              }))
-                                            }
-                                            disabled={attrSavingMap[entity.id]}
-                                            className="priority-select"
-                                          >
-                                            <option value="INT">INT</option>
-                                            <option value="VARCHAR">VARCHAR</option>
-                                            <option value="TEXT">TEXT</option>
-                                            <option value="DATE">DATE</option>
-                                            <option value="BOOLEAN">BOOLEAN</option>
-                                            <option value="DECIMAL">DECIMAL</option>
-                                          </select>
-                                        </div>
-
-                                        <div className="form-group">
-                                          <label htmlFor={`attrKeyType-${entity.id}`}>
-                                            Key Type
-                                          </label>
-                                          <select
-                                            id={`attrKeyType-${entity.id}`}
-                                            value={(attrInputMap[entity.id] || {}).key_type || 'None'}
-                                            onChange={(e) =>
-                                              setAttrInputMap((prev) => ({
-                                                ...prev,
-                                                [entity.id]: {
-                                                  ...(prev[entity.id] || { name: '', data_type: 'INT' }),
-                                                  key_type: e.target.value,
-                                                },
-                                              }))
-                                            }
-                                            disabled={attrSavingMap[entity.id]}
-                                            className="priority-select"
-                                          >
-                                            <option value="None">None</option>
-                                            <option value="Primary Key">Primary Key</option>
-                                            <option value="Foreign Key">Foreign Key</option>
-                                          </select>
-                                        </div>
-                                      </div>
-
-                                      <div className="form-actions">
-                                        <button
-                                          type="submit"
-                                          className="submit-btn"
-                                          disabled={attrSavingMap[entity.id]}
-                                        >
-                                          {attrSavingMap[entity.id] ? 'Saving...' : 'Save Attribute'}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="cancel-btn"
-                                          onClick={() =>
-                                            setShowAttrFormMap((prev) => ({
-                                              ...prev,
-                                              [entity.id]: false,
-                                            }))
-                                          }
-                                          disabled={attrSavingMap[entity.id]}
-                                        >
-                                          Cancel
-                                        </button>
-                                      </div>
-                                    </form>
-                                  </div>
-                                )}
-
-                                {/* Attributes List / Table */}
-                                {entityAttrs.length === 0 ? (
-                                  <p className="empty-text attr-empty-text">
-                                    No attributes added yet. Click "+ Add Attribute" to define columns.
-                                  </p>
-                                ) : (
-                                  <div className="attributes-table-wrapper">
-                                    <table className="attributes-table">
-                                      <thead>
-                                        <tr>
-                                          <th>Attribute Name</th>
-                                          <th>Data Type</th>
-                                          <th>Key Type</th>
-                                          <th className="th-action">Action</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {entityAttrs.map((attr) => (
-                                          <tr key={attr.id} className="attribute-row">
-                                            <td className="attr-name-cell">
-                                              <code>{attr.name}</code>
-                                            </td>
-                                            <td className="attr-type-cell">
-                                              <span className="type-badge">
-                                                {attr.data_type}
-                                              </span>
-                                            </td>
-                                            <td className="attr-key-cell">
-                                              {attr.key_type === 'Primary Key' ? (
-                                                <span className="key-badge key-pk">
-                                                  PK (Primary Key)
-                                                </span>
-                                              ) : attr.key_type === 'Foreign Key' ? (
-                                                <span className="key-badge key-fk">
-                                                  FK (Foreign Key)
-                                                </span>
-                                              ) : (
-                                                <span className="key-badge key-none">
-                                                  None
-                                                </span>
-                                              )}
-                                            </td>
-                                            <td className="attr-action-cell">
-                                              <button
-                                                className="delete-btn delete-btn-small"
-                                                onClick={() =>
-                                                  handleDeleteAttribute(attr.id, entity.id)
-                                                }
-                                                title="Delete attribute"
-                                              >
-                                                Delete
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </article>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* =================================================== */}
-                  {/* ENTITY RELATIONSHIPS SUB-SECTION                    */}
-                  {/* =================================================== */}
-                  <div className="relationships-section">
-                    <div className="relationships-header">
-                      <div>
-                        <h4>Entity Relationships</h4>
-                        <p className="section-subtitle">
-                          Connect entities using One-to-One, One-to-Many, or Many-to-Many relations.
-                        </p>
-                      </div>
-                      <button
-                        className="action-btn new-btn"
-                        onClick={() => {
-                          setShowAddRelForm(!showAddRelForm);
-                          setRelMessage('');
-                        }}
-                        disabled={entities.length < 2}
-                        title={
-                          entities.length < 2
-                            ? 'Create at least 2 entities to define relationships'
-                            : '+ Add Relationship'
-                        }
-                      >
-                        {showAddRelForm ? 'Close Form' : '+ Add Relationship'}
-                      </button>
-                    </div>
-
-                    {entities.length < 2 && (
-                      <p className="info-text">
-                        Tip: You need at least 2 entities to create relationships between them.
-                      </p>
-                    )}
-
-                    {/* Add Relationship Form */}
-                    {showAddRelForm && (
-                      <div className="relationship-form-box">
-                        <h5>Add Relationship</h5>
-
-                        {relMessage && (
-                          <div
-                            className={`message-box ${
-                              isRelError ? 'error' : 'success'
-                            }`}
-                          >
-                            {relMessage}
-                          </div>
-                        )}
-
-                        <form
-                          onSubmit={handleCreateRelationship}
-                          className="project-form"
-                        >
-                          <div className="form-row-2col">
-                            <div className="form-group">
-                              <label htmlFor="relFromEntity">From Entity *</label>
-                              <select
-                                id="relFromEntity"
-                                value={relFromEntityId}
-                                onChange={(e) => setRelFromEntityId(e.target.value)}
-                                disabled={isSavingRel}
-                                className="priority-select"
-                              >
-                                <option value="">-- Select From Entity --</option>
-                                {entities.map((ent) => (
-                                  <option key={ent.id} value={ent.id}>
-                                    {ent.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="form-group">
-                              <label htmlFor="relToEntity">To Entity *</label>
-                              <select
-                                id="relToEntity"
-                                value={relToEntityId}
-                                onChange={(e) => setRelToEntityId(e.target.value)}
-                                disabled={isSavingRel}
-                                className="priority-select"
-                              >
-                                <option value="">-- Select To Entity --</option>
-                                {entities.map((ent) => (
-                                  <option key={ent.id} value={ent.id}>
-                                    {ent.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="form-group">
-                            <label htmlFor="relType">Relationship Type *</label>
-                            <select
-                              id="relType"
-                              value={relType}
-                              onChange={(e) => setRelType(e.target.value)}
-                              disabled={isSavingRel}
-                              className="priority-select"
-                            >
-                              <option value="One-to-One">One-to-One</option>
-                              <option value="One-to-Many">One-to-Many</option>
-                              <option value="Many-to-Many">Many-to-Many</option>
-                            </select>
-                          </div>
-
-                          <div className="form-actions">
-                            <button
-                              type="submit"
-                              className="submit-btn"
-                              disabled={isSavingRel}
-                            >
-                              {isSavingRel ? 'Saving...' : 'Save Relationship'}
-                            </button>
-                            <button
-                              type="button"
-                              className="cancel-btn"
-                              onClick={() => {
-                                setShowAddRelForm(false);
-                                setRelMessage('');
-                              }}
-                              disabled={isSavingRel}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    )}
-
-                    {/* Relationships List */}
-                    {loadingRelationships ? (
-                      <p className="empty-text">Loading relationships...</p>
-                    ) : dbRelationships.length === 0 ? (
-                      <p className="empty-text">No relationships defined yet.</p>
-                    ) : (
-                      <div className="relationships-list">
-                        {dbRelationships.map((rel) => (
-                          <div key={rel.id} className="relationship-card">
-                            <div className="rel-card-left">
-                              <div className="rel-flow">
-                                <span className="rel-entity-pill">
-                                  {rel.from_entity_name || `Entity #${rel.from_entity_id}`}
-                                </span>
-                                <span className="rel-connector">
-                                  <span className="rel-line"></span>
-                                  <span className="rel-type-tag">
-                                    {rel.relationship_type}
-                                  </span>
-                                  <span className="rel-arrow">➔</span>
-                                </span>
-                                <span className="rel-entity-pill">
-                                  {rel.to_entity_name || `Entity #${rel.to_entity_id}`}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="rel-card-right">
-                              <button
-                                className="delete-btn delete-btn-small"
-                                onClick={() => handleDeleteRelationship(rel.id)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              </div>
-            ) : null}
-          </section>
-        )}
-      </div>
-    </main>
+                {activeSection === 'ai-mentor' && (
+                  <PlaceholderSection
+                    title="AI Mentor"
+                    subtitle="Interactive explanations and concept breakdowns tailored to your project."
+                    icon={<MentorIcon className="w-8 h-8" />}
+                    description="Ask questions about your software architecture, get explanations of complex engineering choices, and receive suggestions for best practices."
+                  />
+                )}
+              </main>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
   );
 }
 

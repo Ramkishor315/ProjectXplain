@@ -7,7 +7,7 @@ process.env.BROWSER = 'msedge';
 export default defineConfig({
   plugins: [react()],
   server: {
-    open:'chrome',
+    open: true,
     proxy: {
       '/api': 'http://localhost:4000',
     },

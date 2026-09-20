@@ -112,6 +112,28 @@ connection.connect((error) => {
       console.error('Error ensuring entity_relationships table exists:', err.message);
     }
   });
+
+  // Ensure api_endpoints table exists (Feature 6)
+  const createApiEndpointsTableQuery = `
+    CREATE TABLE IF NOT EXISTS api_endpoints (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_id INT NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      method VARCHAR(20) NOT NULL,
+      endpoint VARCHAR(255) NOT NULL,
+      description TEXT,
+      request_body TEXT,
+      response_body TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `;
+
+  connection.query(createApiEndpointsTableQuery, (err) => {
+    if (err) {
+      console.error('Error ensuring api_endpoints table exists:', err.message);
+    }
+  });
 });
 
 module.exports = connection;

@@ -8,6 +8,7 @@ const projectRoutes = require('./routes/projects');
 const requirementRoutes = require('./routes/requirements');
 const userStoryRoutes = require('./routes/userStories');
 const databaseRoutes = require('./routes/database');
+const apiRoutes = require('./routes/apis');
 
 const app = express();
 
@@ -27,5 +28,6 @@ app.use('/api', projectRoutes);
 app.use('/api', requirementRoutes);
 app.use('/api', userStoryRoutes);
 app.use('/api', databaseRoutes);
+app.use('/api', apiRoutes);
 
 module.exports = app;
