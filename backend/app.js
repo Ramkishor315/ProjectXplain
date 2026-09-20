@@ -11,6 +11,7 @@ const databaseRoutes = require('./routes/database');
 const apiRoutes = require('./routes/apis');
 const architectureRoutes = require('./routes/architecture');
 const dataFlowRoutes = require('./routes/dataFlow');
+const cseConceptsRoutes = require('./routes/cseConcepts');
 
 const app = express();
 
@@ -33,5 +34,6 @@ app.use('/api', databaseRoutes);
 app.use('/api', apiRoutes);
 app.use('/api', architectureRoutes);
 app.use('/api', dataFlowRoutes);
+app.use('/api', cseConceptsRoutes);
 
 module.exports = app;

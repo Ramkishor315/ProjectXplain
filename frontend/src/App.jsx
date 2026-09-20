@@ -20,6 +20,7 @@ import DatabaseDesign from './pages/project/DatabaseDesign';
 import ApiDesign from './pages/project/ApiDesign';
 import SystemArchitecture from './pages/project/SystemArchitecture';
 import DataFlow from './pages/project/DataFlow';
+import CseConcepts from './pages/project/CseConcepts';
 import PlaceholderSection from './pages/project/PlaceholderSection';
 
 const API_PROJECTS_URL = 'http://localhost:4000/api/projects';
@@ -31,6 +32,8 @@ const API_RELATIONSHIPS_URL = 'http://localhost:4000/api/relationships';
 const API_APIS_URL = 'http://localhost:4000/api/apis';
 const API_ARCHITECTURE_URL = 'http://localhost:4000/api/architecture';
 const API_DATA_FLOW_URL = 'http://localhost:4000/api/data-flow';
+const API_CSE_CONCEPTS_URL = 'http://localhost:4000/api/cse-concepts';
+const API_PROJECT_CONCEPTS_URL = 'http://localhost:4000/api/project-concepts';
 
 function App() {
   // Navigation view state: 'dashboard' | 'create' | 'detail'
@@ -166,6 +169,12 @@ function App() {
   const [flowMessage, setFlowMessage] = useState('');
   const [isFlowError, setIsFlowError] = useState(false);
 
+  // CSE Concepts states (Feature 9)
+  const [cseConcepts, setCseConcepts] = useState([]);
+  const [allAvailableConcepts, setAllAvailableConcepts] = useState([]);
+  const [cseSubjects, setCseSubjects] = useState([]);
+  const [loadingCseConcepts, setLoadingCseConcepts] = useState(false);
+
   // Roadmap progress modules
   const progressModules = [
     { id: 1, name: 'Project Created', completed: true },
@@ -175,7 +184,7 @@ function App() {
     { id: 5, name: 'API Design', completed: apiEndpoints.length > 0 },
     { id: 6, name: 'System Architecture', completed: archComponents.length > 0 },
     { id: 7, name: 'Request / Data Flow', completed: dataFlowSteps.length > 0 },
-    { id: 8, name: 'CSE Concepts', completed: false },
+    { id: 8, name: 'CSE Concepts', completed: cseConcepts.length > 0 },
     { id: 9, name: 'AI Mentor', completed: false },
   ];
 
@@ -386,9 +395,60 @@ function App() {
       });
   }
 
-  // Load all projects on initial page mount
+  // Fetch project-specific CSE concepts (GET /api/projects/:projectId/cse-concepts)
+  function fetchProjectCseConcepts(projectId) {
+    setLoadingCseConcepts(true);
+    fetch(`${API_PROJECTS_URL}/${projectId}/cse-concepts`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to fetch CSE concepts');
+        return response.json();
+      })
+      .then((data) => {
+        setCseConcepts(data || []);
+      })
+      .catch((error) => {
+        console.error('Error fetching project CSE concepts:', error);
+      })
+      .finally(() => {
+        setLoadingCseConcepts(false);
+      });
+  }
+
+  // Fetch all CSE subjects (GET /api/cse-concepts/subjects)
+  function fetchCseSubjects() {
+    fetch(`${API_CSE_CONCEPTS_URL}/subjects`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to fetch CSE subjects');
+        return response.json();
+      })
+      .then((data) => {
+        setCseSubjects(data || []);
+      })
+      .catch((error) => {
+        console.error('Error fetching CSE subjects:', error);
+      });
+  }
+
+  // Fetch all available predefined CSE concepts (GET /api/cse-concepts)
+  function fetchAllAvailableConcepts() {
+    fetch(API_CSE_CONCEPTS_URL)
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to fetch all CSE concepts');
+        return response.json();
+      })
+      .then((data) => {
+        setAllAvailableConcepts(data || []);
+      })
+      .catch((error) => {
+        console.error('Error fetching all CSE concepts:', error);
+      });
+  }
+
+  // Load all projects and CSE knowledge base on initial page mount
   useEffect(() => {
     fetchProjects();
+    fetchCseSubjects();
+    fetchAllAvailableConcepts();
   }, []);
 
   // Fetch a single project by ID and its requirements, then open detail view
@@ -454,6 +514,8 @@ function App() {
     setFlowDescription('');
     setFlowMessage('');
     setIsFlowError(false);
+    setCseConcepts([]);
+    setLoadingCseConcepts(false);
     setActiveSection('overview');
 
     fetch(`${API_PROJECTS_URL}/${id}`)
@@ -477,6 +539,8 @@ function App() {
         fetchArchConnections(data.id);
         // Fetch data flow steps (Feature 8)
         fetchDataFlowSteps(data.id);
+        // Fetch CSE concepts (Feature 9)
+        fetchProjectCseConcepts(data.id);
       })
       .catch((error) => {
         setDetailError(error.message || 'Could not load project');
@@ -706,6 +770,8 @@ function App() {
     setApiRequestBody('');
     setApiResponseBody('');
     setApiMessage('');
+    setCseConcepts([]);
+    setLoadingCseConcepts(false);
     setActiveSection('overview');
   }
 
@@ -1186,6 +1252,46 @@ function App() {
       });
   }
 
+  // Handle manually associating a concept with the project (POST /api/projects/:projectId/cse-concepts)
+  function handleAssociateConcept(conceptId, reason) {
+    if (!selectedProject) return Promise.reject(new Error('No project selected'));
+
+    return fetch(`${API_PROJECTS_URL}/${selectedProject.id}/cse-concepts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ concept_id: conceptId, reason }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((err) => {
+            throw new Error(err.error || 'Failed to associate concept');
+          });
+        }
+        return response.json();
+      })
+      .then(() => {
+        fetchProjectCseConcepts(selectedProject.id);
+      });
+  }
+
+  // Handle removing a concept association from the project (DELETE /api/project-concepts/:id)
+  function handleRemoveConcept(mappingId) {
+    const confirmed = window.confirm('Are you sure you want to remove this concept from your project?');
+    if (!confirmed) return;
+
+    fetch(`${API_PROJECT_CONCEPTS_URL}/${mappingId}`, { method: 'DELETE' })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to remove concept mapping');
+        return response.json();
+      })
+      .then(() => {
+        setCseConcepts((prev) => prev.filter((c) => c.mapping_id !== mappingId));
+      })
+      .catch((error) => {
+        alert(error.message || 'Error removing concept mapping');
+      });
+  }
+
   // Summary counts for sidebar and overview
   const counts = {
     requirements: requirements.length,
@@ -1198,6 +1304,7 @@ function App() {
     components: archComponents.length,
     connections: archConnections.length,
     dataFlow: dataFlowSteps.length,
+    cseConcepts: cseConcepts.length,
   };
 
   return (
@@ -1603,11 +1710,14 @@ function App() {
                 )}
 
                 {activeSection === 'cse-concepts' && (
-                  <PlaceholderSection
-                    title="CSE Concepts"
-                    subtitle="Core Computer Science and Engineering principles applied in this project."
-                    icon={<ConceptsIcon className="w-8 h-8" />}
-                    description="Explore the software engineering patterns, algorithmic trade-offs, ACID properties, networking fundamentals, and database normalization used in your system."
+                  <CseConcepts
+                    concepts={cseConcepts}
+                    allAvailableConcepts={allAvailableConcepts}
+                    subjects={cseSubjects}
+                    loading={loadingCseConcepts}
+                    onAssociateConcept={handleAssociateConcept}
+                    onRemoveConcept={handleRemoveConcept}
+                    onNavigate={setActiveSection}
                   />
                 )}
 

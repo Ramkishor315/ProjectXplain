@@ -54,15 +54,16 @@ function ProjectSidebar({ activeSection, onSelectSection, counts }) {
       count: counts?.dataFlow,
       countColor: 'bg-stone-200 text-stone-800',
     },
-  ];
-
-  const futureDesignItems = [
     {
       id: 'cse-concepts',
       name: 'CSE Concepts',
       icon: <ConceptsIcon className="w-4 h-4 shrink-0" />,
-      isPlaceholder: true,
+      count: counts?.cseConcepts,
+      countColor: 'bg-red-100 text-red-700',
     },
+  ];
+
+  const futureDesignItems = [
     {
       id: 'ai-mentor',
       name: 'AI Mentor',
