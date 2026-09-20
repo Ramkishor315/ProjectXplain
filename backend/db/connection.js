@@ -79,8 +79,8 @@ connection.connect((error) => {
       id INT AUTO_INCREMENT PRIMARY KEY,
       entity_id INT NOT NULL,
       name VARCHAR(100) NOT NULL,
-      data_type VARCHAR(30) NOT NULL,
-      key_type VARCHAR(20) DEFAULT 'None',
+      data_type VARCHAR(50) NOT NULL,
+      key_type VARCHAR(50) DEFAULT 'None',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (entity_id) REFERENCES database_entities(id) ON DELETE CASCADE
     )
@@ -99,7 +99,7 @@ connection.connect((error) => {
       project_id INT NOT NULL,
       from_entity_id INT NOT NULL,
       to_entity_id INT NOT NULL,
-      relationship_type VARCHAR(30) NOT NULL,
+      relationship_type VARCHAR(50) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
       FOREIGN KEY (from_entity_id) REFERENCES database_entities(id) ON DELETE CASCADE,
