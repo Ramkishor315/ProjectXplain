@@ -12,6 +12,7 @@ const apiRoutes = require('./routes/apis');
 const architectureRoutes = require('./routes/architecture');
 const dataFlowRoutes = require('./routes/dataFlow');
 const cseConceptsRoutes = require('./routes/cseConcepts');
+const mentorRoutes = require('./routes/mentor');
 
 const app = express();
 
@@ -35,5 +36,6 @@ app.use('/api', apiRoutes);
 app.use('/api', architectureRoutes);
 app.use('/api', dataFlowRoutes);
 app.use('/api', cseConceptsRoutes);
+app.use('/api', mentorRoutes);
 
 module.exports = app;
