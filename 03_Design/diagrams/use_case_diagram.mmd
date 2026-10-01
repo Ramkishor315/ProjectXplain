@@ -1,0 +1,36 @@
+%% Mermaid Use Case Diagram for ProjectXplain
+flowchart LR
+    Student(["CSE Student"])
+    Evaluator(["Academic Evaluator / Examiner"])
+
+    subgraph ProjectXplain_Platform ["ProjectXplain Workspace Platform"]
+        UC1(["UC-01: Create & Switch Projects"])
+        UC2(["UC-02: View Project Dashboard"])
+        UC3(["UC-03: Manage Requirements & Priorities"])
+        UC4(["UC-04: Manage User Stories"])
+        UC5(["UC-05: Model Relational Database"])
+        UC6(["UC-06: Document Project REST APIs"])
+        UC7(["UC-07: Model System Architecture"])
+        UC8(["UC-08: Trace Request / Data Flow"])
+        UC9(["UC-09: Map CSE Curriculum Concepts"])
+        UC10(["UC-10: Practice Viva with AI Mentor"])
+        UC11(["UC-11: Review Viva Readiness & Artifacts"])
+    end
+
+    Student --> UC1
+    Student --> UC2
+    Student --> UC3
+    Student --> UC4
+    Student --> UC5
+    Student --> UC6
+    Student --> UC7
+    Student --> UC8
+    Student --> UC9
+    Student --> UC10
+
+    Evaluator --> UC2
+    Evaluator --> UC11
+    UC11 -.-> UC5
+    UC11 -.-> UC6
+    UC11 -.-> UC8
+    UC11 -.-> UC9

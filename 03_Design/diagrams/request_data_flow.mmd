@@ -1,0 +1,29 @@
+%% Mermaid Sequence Diagram for Request and Data Flow in ProjectXplain
+sequenceDiagram
+    autonumber
+    actor User as Student / User
+    participant Browser as Client Browser (React SPA)
+    participant Gateway as Express Backend Server
+    participant DB as MySQL Database
+    participant AI as OpenRouter AI Gateway
+
+    Note over User, AI: Scenario 1: Standard API & Database Interaction Flow (Features 1-9)
+    User->>Browser: Enters project design data & clicks Save
+    Browser->>Gateway: HTTP POST /api/projects/:id/entities (JSON payload)
+    Gateway->>Gateway: Validates inputs & parameters
+    Gateway->>DB: INSERT INTO database_entities (...) [SQL Parameterized]
+    DB-->>Gateway: Confirms insertion & returns insertId
+    Gateway-->>Browser: HTTP 201 Created (JSON entity object)
+    Browser-->>User: Updates UI view & increments dashboard count
+
+    Note over User, AI: Scenario 2: Context-Aware AI Mentor Query Flow (Feature 10)
+    User->>Browser: Types viva query & clicks "Ask Mentor"
+    Browser->>Gateway: HTTP POST /api/projects/:id/mentor { question }
+    Gateway->>DB: Parallel queries: fetch requirements, entities, APIs, components, flow, concepts
+    DB-->>Gateway: Returns consolidated project records
+    Gateway->>Gateway: Assembles structured system prompt & project context
+    Gateway->>AI: HTTPS POST /api/v1/chat/completions (openrouter/free)
+    Note right of Gateway: Server Bearer token used; client never sees API key
+    AI-->>Gateway: Returns generated educational AI answer
+    Gateway-->>Browser: HTTP 200 OK { answer: markdownText }
+    Browser-->>User: Renders formatted viva guidance & review topics

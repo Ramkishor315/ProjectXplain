@@ -1,0 +1,143 @@
+%% Mermaid Entity-Relationship Diagram for ProjectXplain (Actual 13 Tables)
+erDiagram
+    PROJECTS ||--o{ REQUIREMENTS : "has (project_id)"
+    REQUIREMENTS ||--o{ USER_STORIES : "contains (requirement_id)"
+    
+    PROJECTS ||--o{ DATABASE_ENTITIES : "defines (project_id)"
+    DATABASE_ENTITIES ||--o{ ENTITY_ATTRIBUTES : "has (entity_id)"
+    DATABASE_ENTITIES ||--o{ ENTITY_RELATIONSHIPS : "source (from_entity_id)"
+    DATABASE_ENTITIES ||--o{ ENTITY_RELATIONSHIPS : "target (to_entity_id)"
+    PROJECTS ||--o{ ENTITY_RELATIONSHIPS : "scoped_to (project_id)"
+    
+    PROJECTS ||--o{ API_ENDPOINTS : "documents (project_id)"
+    
+    PROJECTS ||--o{ ARCHITECTURE_COMPONENTS : "contains (project_id)"
+    ARCHITECTURE_COMPONENTS ||--o{ ARCHITECTURE_CONNECTIONS : "source (from_component_id)"
+    ARCHITECTURE_COMPONENTS ||--o{ ARCHITECTURE_CONNECTIONS : "target (to_component_id)"
+    PROJECTS ||--o{ ARCHITECTURE_CONNECTIONS : "scoped_to (project_id)"
+    
+    PROJECTS ||--o{ DATA_FLOW_STEPS : "traces (project_id)"
+    ARCHITECTURE_COMPONENTS ||--o{ DATA_FLOW_STEPS : "from (from_component_id)"
+    ARCHITECTURE_COMPONENTS ||--o{ DATA_FLOW_STEPS : "to (to_component_id)"
+    API_ENDPOINTS |o--o{ DATA_FLOW_STEPS : "references (api_id)"
+    
+    CSE_SUBJECTS ||--o{ CSE_CONCEPTS : "categorizes (subject_id)"
+    PROJECTS ||--o{ PROJECT_CONCEPTS : "maps (project_id)"
+    CSE_CONCEPTS ||--o{ PROJECT_CONCEPTS : "mapped_in (concept_id)"
+
+    PROJECTS {
+        int id PK
+        varchar name
+        text idea
+        timestamp created_at
+    }
+
+    REQUIREMENTS {
+        int id PK
+        int project_id FK
+        varchar title
+        text description
+        varchar priority
+        timestamp created_at
+    }
+
+    USER_STORIES {
+        int id PK
+        int requirement_id FK
+        varchar title
+        text description
+        timestamp created_at
+    }
+
+    DATABASE_ENTITIES {
+        int id PK
+        int project_id FK
+        varchar name
+        text description
+        timestamp created_at
+    }
+
+    ENTITY_ATTRIBUTES {
+        int id PK
+        int entity_id FK
+        varchar name
+        varchar data_type
+        varchar key_type
+        timestamp created_at
+    }
+
+    ENTITY_RELATIONSHIPS {
+        int id PK
+        int project_id FK
+        int from_entity_id FK
+        int to_entity_id FK
+        varchar relationship_type
+        timestamp created_at
+    }
+
+    API_ENDPOINTS {
+        int id PK
+        int project_id FK
+        varchar name
+        varchar method
+        varchar endpoint
+        text description
+        text request_body
+        text response_body
+        timestamp created_at
+    }
+
+    ARCHITECTURE_COMPONENTS {
+        int id PK
+        int project_id FK
+        varchar name
+        varchar type
+        text description
+        timestamp created_at
+    }
+
+    ARCHITECTURE_CONNECTIONS {
+        int id PK
+        int project_id FK
+        int from_component_id FK
+        int to_component_id FK
+        text description
+        timestamp created_at
+    }
+
+    DATA_FLOW_STEPS {
+        int id PK
+        int project_id FK
+        int step_number
+        int from_component_id FK
+        int to_component_id FK
+        int api_id FK
+        varchar action
+        varchar method
+        text description
+        timestamp created_at
+    }
+
+    CSE_SUBJECTS {
+        int id PK
+        varchar name UK
+    }
+
+    CSE_CONCEPTS {
+        int id PK
+        int subject_id FK
+        varchar name
+        text explanation
+        text project_relevance
+        text project_usage
+        text what_to_learn
+        timestamp created_at
+    }
+
+    PROJECT_CONCEPTS {
+        int id PK
+        int project_id FK
+        int concept_id FK
+        text reason
+        timestamp created_at
+    }

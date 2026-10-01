@@ -1,0 +1,47 @@
+%% Mermaid System Architecture Diagram for ProjectXplain
+flowchart TB
+    subgraph ClientTier ["Presentation Layer (Client Browser)"]
+        BrowserUI["React SPA (Vite + Tailwind CSS)\nRunning on http://localhost:5173"]
+        StateManagement["React Component Hierarchy\n(App.jsx, Workspace Pages, UI Components)"]
+        FetchClient["Native fetch() API Client"]
+        BrowserUI --- StateManagement
+        StateManagement --- FetchClient
+    end
+
+    subgraph ServerTier ["Application Layer (Node.js + Express)"]
+        ExpressApp["Express Server\nRunning on http://localhost:4000"]
+        Middlewares["Middleware: cors, express.json()"]
+        EnvConfig["Environment Config (.env)\n(PORT, DB Credentials, OPENROUTER_API_KEY)"]
+        
+        subgraph RoutesControllers ["Routes & Controllers (10 Modules)"]
+            ProjectMod["Projects & Overview (Features 1-2)"]
+            ReqMod["Requirements & User Stories (Features 3-4)"]
+            DbMod["Database Design (Feature 5)"]
+            ApiMod["API Design Documentation (Feature 6)"]
+            ArchMod["System Architecture (Feature 7)"]
+            FlowMod["Request / Data Flow (Feature 8)"]
+            CseMod["CSE Concepts Knowledge Base (Feature 9)"]
+            MentorMod["AI Mentor Context Engine (Feature 10)"]
+        end
+
+        ExpressApp --> Middlewares
+        Middlewares --> RoutesControllers
+        EnvConfig -.-> ExpressApp
+        EnvConfig -.-> MentorMod
+    end
+
+    subgraph DataTier ["Data Storage Layer (Relational Database)"]
+        MySQLServer[("MySQL Database Server\nlocalhost:3306\nmysql2 driver")]
+        Tables13["13 Relational Tables\n(projects, requirements, user_stories,\nentities, attributes, relationships,\napis, components, connections,\ndata_flow_steps, cse_subjects,\ncse_concepts, project_concepts)"]
+        MySQLServer --- Tables13
+    end
+
+    subgraph ExternalTier ["External AI Service Gateway"]
+        OpenRouterAPI["OpenRouter API Gateway\nhttps://openrouter.ai/api/v1"]
+        FreeModel["LLM Model: openrouter/free\n(OpenAI Node.js SDK)"]
+        OpenRouterAPI --- FreeModel
+    end
+
+    FetchClient -- "HTTP REST (JSON)\nRequests & Responses" --> ExpressApp
+    RoutesControllers -- "SQL Queries (mysql2)\nParameterized" --> MySQLServer
+    MentorMod -- "Secure Server-Side HTTPS\nBearer Token (Server-Only)" --> OpenRouterAPI
